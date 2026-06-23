@@ -42,7 +42,7 @@ def test_error_on_ok_raises():
 def test_result_is_frozen():
     r = Ok(1)
     with pytest.raises(dataclasses.FrozenInstanceError):
-        r._is_ok = False  # type: ignore[misc]
+        r._is_ok = False  # ty: ignore[invalid-assignment]
 
 
 def test_result_ok_constructor():

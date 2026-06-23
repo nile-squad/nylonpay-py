@@ -21,6 +21,7 @@ import os
 import pytest
 
 from nylonpay import SdkException, create_nylon_pay, parse_error
+from nylonpay.types import NylonPaySdk
 
 API_KEY = os.environ.get("NYLONPAY_API_KEY", "")
 API_SECRET = os.environ.get("NYLONPAY_API_SECRET", "")
@@ -39,7 +40,7 @@ skip_live_only = pytest.mark.skipif(
 )
 
 
-def _create_sdk() -> object:
+def _create_sdk() -> NylonPaySdk:
     """Create a fresh SDK instance with singleton bypass."""
     kwargs: dict[str, object] = {
         "api_key": API_KEY,
