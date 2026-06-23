@@ -69,4 +69,4 @@ format-check = "ruff format --check ."
 lint-fix = "ruff check --fix . && ruff format ."
 check = ["lint", "format-check", "typecheck", "test"]
 build = "uv build"
-publish = ["check", "build", "uv publish"]
+publish = ["check", "build", { cmd = "uv publish" }]
