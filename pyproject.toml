@@ -1,0 +1,72 @@
+[project]
+name = "nylonpay-py"
+version = "0.1.0"
+description = "Nylon Pay SDK for merchant integrations"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Nile Squad", email = "contact@nilesquad.com" },
+]
+keywords = ["nylonpay", "nylon-pay", "payments", "mobile-money", "payouts", "fintech", "sdk", "python"]
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.27",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[project.urls]
+Homepage = "https://github.com/nile-squad/nylonpay-py#readme"
+Repository = "https://github.com/nile-squad/nylonpay-py"
+Issues = "https://github.com/nile-squad/nylonpay-py/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nylonpay"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.11",
+    "pytest>=8.0",
+    "poethepoet>=0.32",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.poe.tasks]
+test = "pytest tests/unit tests/security -v"
+test-unit = "pytest tests/unit -v"
+test-security = "pytest tests/security -v"
+test-integration = "pytest tests/integration -v"
+typecheck = "uvx ty check"
+lint = "ruff check ."
+format-check = "ruff format --check ."
+lint-fix = "ruff check --fix . && ruff format ."
+check = ["lint", "format-check", "typecheck", "test"]
+build = "uv build"
+publish = ["check", "build", "uv publish"]
