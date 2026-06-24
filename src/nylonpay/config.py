@@ -37,6 +37,7 @@ SDK_ACTIONS = {
     "make_payout_and_resolve": "sdk-make-payout-and-resolve",
     "get_status": "sdk-get-status",
     "get_transaction": "sdk-get-transaction",
+    "list_transactions": "sdk-list-transactions",
     "verify_phone": "sdk-verify-phone",
     "create_invoice": "sdk-create-invoice",
 }

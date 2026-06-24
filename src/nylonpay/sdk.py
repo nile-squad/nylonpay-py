@@ -2,10 +2,11 @@
 
 Created via :func:`factory.create_nylon_pay` and returned as ``NylonPaySdk``.
 
-This module implements the 9 operations in the SDK spec: collect_payment,
+This module implements the 11 operations in the SDK spec: collect_payment,
 collect_payment_and_resolve, make_payout, make_payout_and_resolve,
-get_status, get_transaction, verify_phone, create_invoice, and
-verify_webhook_signature. Each operation follows the same lifecycle:
+get_status, get_transaction, list_transactions, get_transactions_by_tag,
+verify_phone, create_invoice, and verify_webhook_signature. Each operation
+follows the same lifecycle:
 
 1. **Validate** — check input fields (amounts, references, phone format)
    and throw ``SdkException`` on programmer errors before any network call.
@@ -48,6 +49,8 @@ from .types import (
     GetTransactionInput,
     InitiationResult,
     InvoiceResponse,
+    ListTransactionsInput,
+    ListTransactionsResponse,
     MakePayoutInput,
     NylonPaySdk,
     PaymentInstance,
@@ -56,6 +59,7 @@ from .types import (
     SdkHooks,
     StatusResponse,
     Transaction,
+    TransactionSummary,
     VerifyPhoneInput,
     VerifyWebhookInput,
 )
@@ -411,7 +415,46 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         return Err(result.error)
 
     # ------------------------------------------------------------------
-    # 7. verify_phone
+    # 7. list_transactions
+    # ------------------------------------------------------------------
+
+    def list_transactions(**kwargs: Any) -> Result[ListTransactionsResponse, str]:
+        """List transactions with optional filters. Returns a paginated result."""
+        input = coerce_dataclass(ListTransactionsInput, kwargs)
+
+        result = transport["send"](
+            {"action": SDK_ACTIONS["list_transactions"], "payload": to_wire(input)}
+        )
+
+        if result.is_ok:
+            data = result.value
+            summaries = [
+                from_wire(TransactionSummary, tx)
+                for tx in (data.get("transactions") or [])
+            ]
+            return Ok(
+                ListTransactionsResponse(
+                    transactions=summaries,
+                    count=int(data.get("count", 0)),
+                    limit=int(data.get("limit", 20)),
+                    offset=int(data.get("offset", 0)),
+                    tags=list(data.get("tags") or []),
+                )
+            )
+        return Err(result.error)
+
+    # ------------------------------------------------------------------
+    # 8. get_transactions_by_tag
+    # ------------------------------------------------------------------
+
+    def get_transactions_by_tag(tag: str, **kwargs: Any) -> Result[ListTransactionsResponse, str]:
+        """Shorthand for filtering by a single tag."""
+        if not tag or not tag.strip():
+            _throw_validation("tag is required")
+        return list_transactions(tags=[tag], **kwargs)
+
+    # ------------------------------------------------------------------
+    # 9. verify_phone
     # ------------------------------------------------------------------
 
     def verify_phone(
@@ -433,7 +476,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         return Err(result.error)
 
     # ------------------------------------------------------------------
-    # 8. create_invoice
+    # 10. create_invoice
     # ------------------------------------------------------------------
 
     def create_invoice(
@@ -472,7 +515,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         return Err(result.error)
 
     # ------------------------------------------------------------------
-    # 9. verify_webhook_signature
+    # 11. verify_webhook_signature
     # ------------------------------------------------------------------
 
     def verify_webhook(**kwargs: Any) -> bool:
@@ -493,6 +536,8 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             make_payout_and_resolve=make_payout_and_resolve,
             get_status=get_status,
             get_transaction=get_transaction,
+            list_transactions=list_transactions,
+            get_transactions_by_tag=get_transactions_by_tag,
             verify_phone=verify_phone,
             create_invoice=create_invoice,
             verify_webhook_signature=verify_webhook,

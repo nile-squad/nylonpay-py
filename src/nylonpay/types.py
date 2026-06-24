@@ -147,6 +147,7 @@ class CollectPaymentInput:
     reference: str | None = None
     method: PaymentMethod | None = None
     bank: BankDetails | None = None
+    tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
 
@@ -164,6 +165,7 @@ class MakePayoutInput:
     destination: Destination
     description: str
     reference: str | None = None
+    tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
 
@@ -215,7 +217,26 @@ class CreateInvoiceInput:
     items: list[InvoiceItem] | None = None
     redirect_url: str | None = None
     reference: str | None = None
+    tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ListTransactionsInput:
+    """Filters for listing transactions.
+
+    All fields are optional — omit to return all transactions for the account.
+    Multiple tags use AND semantics: only transactions carrying every listed
+    tag are returned.
+    """
+
+    tags: list[str] | None = None
+    status: TransactionStatus | None = None
+    type: TransactionType | None = None
+    limit: int | None = None
+    offset: int | None = None
+    created_after: str | None = None
+    created_before: str | None = None
 
 
 @dataclass(frozen=True)
@@ -233,6 +254,38 @@ class VerifyWebhookInput:
 
 
 # --- Response dataclasses ---
+
+
+@dataclass(frozen=True)
+class TransactionSummary:
+    """Lightweight transaction record returned by list operations.
+
+    Contains the fields needed for filtering, display, and reconciliation
+    without the full provider-level detail of :class:`Transaction`.
+    """
+
+    id: str
+    reference: str
+    amount: int
+    currency: Currency
+    status: TransactionStatus
+    type: TransactionType
+    mode: TransactionMode
+    tags: list[str]
+    created_at: str
+    updated_at: str
+    method: str | None = None
+
+
+@dataclass(frozen=True)
+class ListTransactionsResponse:
+    """Response from :meth:`NylonPaySdk.list_transactions`."""
+
+    transactions: list[TransactionSummary]
+    count: int
+    limit: int
+    offset: int
+    tags: list[str]
 
 
 @dataclass(frozen=True)
@@ -553,6 +606,23 @@ class NylonPaySdk(Protocol):
 
     def get_transaction(self, **kwargs: Any) -> Result[Transaction, str]:
         """Look up a full transaction record by id or reference."""
+        ...
+
+    def list_transactions(self, **kwargs: Any) -> Result[ListTransactionsResponse, str]:
+        """List transactions for the account with optional filters.
+
+        Multiple tags use AND semantics — only transactions carrying all
+        listed tags are returned. Returns a paginated result.
+        """
+        ...
+
+    def get_transactions_by_tag(
+        self, tag: str, **kwargs: Any
+    ) -> Result[ListTransactionsResponse, str]:
+        """Shorthand for filtering by a single tag.
+
+        Equivalent to ``list_transactions(tags=[tag], **kwargs)``.
+        """
         ...
 
     def verify_phone(self, **kwargs: Any) -> Result[PhoneVerification, str]:
