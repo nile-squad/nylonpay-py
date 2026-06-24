@@ -25,16 +25,15 @@ from TypeScript to Python gets the same behavior, not a re-interpretation.
 from __future__ import annotations
 
 import dataclasses
-import secrets
+import re
+import uuid
 from types import SimpleNamespace
 from typing import Any, NoReturn, cast
 
 from .coerce import coerce_dataclass
 from .config import (
-    MAX_REFERENCE_LENGTH,
     MIN_COLLECTION_AMOUNT,
     MIN_DISBURSEMENT_AMOUNT,
-    MIN_REFERENCE_LENGTH,
     SDK_ACTIONS,
 )
 from .payment import create_payment_instance
@@ -67,10 +66,14 @@ from .wire import from_wire, to_wire
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+UUID_REGEX = (
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+)
+
 
 def _generate_reference() -> str:
-    """Generate a random 15-char hex reference for idempotency."""
-    return secrets.token_hex(16)[:15]
+    """Generate a UUID v4 reference for idempotency."""
+    return str(uuid.uuid4())
 
 
 def _throw_validation(message: str) -> NoReturn:
@@ -79,13 +82,11 @@ def _throw_validation(message: str) -> NoReturn:
 
 
 def _resolve_reference(reference: str | None) -> str:
-    """Auto-generate when *None*, else validate 13-15 char range."""
+    """Auto-generate a UUID v4 when *None*, else validate UUID format."""
     if reference is None:
         return _generate_reference()
-    if len(reference) < MIN_REFERENCE_LENGTH or len(reference) > MAX_REFERENCE_LENGTH:
-        _throw_validation(
-            f"reference must be {MIN_REFERENCE_LENGTH}\u2013{MAX_REFERENCE_LENGTH} characters"
-        )
+    if not re.match(UUID_REGEX, reference):
+        _throw_validation("reference must be a valid UUID")
     return reference
 
 

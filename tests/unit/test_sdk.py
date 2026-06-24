@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 from typing import Any
 
 import httpx
@@ -125,9 +126,9 @@ def test_collect_payment_auto_generates_reference_if_omitted(captured):
     try:
         inp = _collect_input(reference=None)
         inst = sdk.collect_payment(**inp)
-        # Auto-gen reference is 15-char hex
-        assert len(inst.reference) == 15
-        assert all(c in "0123456789abcdef" for c in inst.reference)
+        # Auto-gen reference is a UUID v4
+        assert len(inst.reference) == 36
+        assert re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", inst.reference)
         # And it's the one on the wire
         assert cap["body"]["payload"]["reference"] == inst.reference
     finally:
@@ -168,10 +169,10 @@ def test_collect_payment_bad_phone_throws(captured):
         client.close()
 
 
-def test_collect_payment_reference_too_long_throws(captured):
+def test_collect_payment_invalid_uuid_reference_throws(captured):
     sdk, client, _ = _make_sdk(_default_handler)
     try:
-        inp = _collect_input(reference="x" * 20)
+        inp = _collect_input(reference="not-a-uuid")
         with pytest.raises(SdkException) as exc:
             sdk.collect_payment(**inp)
         assert exc.value.category == "validation"
@@ -328,9 +329,9 @@ def test_create_invoice_auto_generates_reference(captured):
         assert result.is_ok
         assert result.value.id == "inv_1"
         assert result.value.status == "pending"
-        # Reference was auto-generated (15 hex)
+        # Reference was auto-generated (UUID v4)
         wire_ref = cap["body"]["payload"]["reference"]
-        assert len(wire_ref) == 15
+        assert len(wire_ref) == 36
     finally:
         client.close()
 

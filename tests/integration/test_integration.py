@@ -53,10 +53,10 @@ def _create_sdk() -> NylonPaySdk:
 
 
 def _unique_reference() -> str:
-    """Generate a unique 15-char reference for test isolation."""
-    import secrets
+    """Generate a unique UUID v4 reference for test isolation."""
+    import uuid
 
-    return secrets.token_hex(8)[:15]
+    return str(uuid.uuid4())
 
 
 @skip_no_credentials
@@ -71,7 +71,7 @@ def test_I1_collect_payment_happy_path() -> None:
         reference=_unique_reference(),
     )
     assert payment.reference
-    assert len(payment.reference) >= 13
+    assert len(payment.reference) == 36
     assert payment.status in ("pending", "processing")
 
 
@@ -125,7 +125,7 @@ def test_I4_payout_happy_path() -> None:
         reference=_unique_reference(),
     )
     assert payment.reference
-    assert len(payment.reference) >= 13
+    assert len(payment.reference) == 36
     assert payment.status in ("pending", "processing")
 
 
