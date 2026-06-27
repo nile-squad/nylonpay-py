@@ -70,9 +70,7 @@ from .wire import from_wire, to_wire
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-UUID_REGEX = (
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-)
+UUID_REGEX = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
 
 
 def _generate_reference() -> str:
@@ -429,8 +427,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         if result.is_ok:
             data = result.value
             summaries = [
-                from_wire(TransactionSummary, tx)
-                for tx in (data.get("transactions") or [])
+                from_wire(TransactionSummary, tx) for tx in (data.get("transactions") or [])
             ]
             return Ok(
                 ListTransactionsResponse(

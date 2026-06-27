@@ -128,7 +128,8 @@ def test_collect_payment_auto_generates_reference_if_omitted(captured):
         inst = sdk.collect_payment(**inp)
         # Auto-gen reference is a UUID v4
         assert len(inst.reference) == 36
-        assert re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", inst.reference)
+        uuid_re = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        assert re.match(uuid_re, inst.reference)
         # And it's the one on the wire
         assert cap["body"]["payload"]["reference"] == inst.reference
     finally:

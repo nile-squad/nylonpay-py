@@ -41,6 +41,7 @@ dev = [
     "ruff>=0.11",
     "pytest>=8.0",
     "poethepoet>=0.32",
+    "twine>=6.0",
 ]
 
 [tool.ruff]
@@ -69,4 +70,4 @@ format-check = "ruff format --check ."
 lint-fix = "ruff check --fix . && ruff format ."
 check = ["lint", "format-check", "typecheck", "test"]
 build = "uv build"
-publish = ["check", "build", { cmd = "uv publish" }]
+publish = ["check", "build", { cmd = "twine upload dist/*" }]
