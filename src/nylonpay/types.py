@@ -57,13 +57,10 @@ TransactionMode = Literal["test", "live"]
 PaymentEvent = Literal["processing", "success", "failed", "cancelled", "error"]
 
 WebhookEventType = Literal[
-    "collection.completed",
-    "collection.failed",
-    "payout.completed",
-    "payout.failed",
-    "payout.reversed",
-    "refund.completed",
-    "chargeback.received",
+    "transaction.successful",
+    "transaction.failed",
+    "transaction.processing",
+    "transaction.cancelled",
 ]
 
 Currency = Literal["USD", "EUR", "GBP", "KES", "UGX", "TZS", "RWF"]
@@ -358,16 +355,40 @@ class InvoiceResponse:
 
 
 @dataclass(frozen=True)
+class WebhookTransactionSnapshot:
+    """Merchant-facing transaction record delivered inside a webhook payload.
+
+    Field names match the webhook JSON body exactly; this type is not passed
+    through wire-case conversion. Merchants can construct it directly from
+    ``json.loads(req.body)`` output for full type confidence on the
+    ``payload`` field of :class:`WebhookPayload`.
+    """
+
+    transactionId: str
+    reference: str
+    amount: str
+    currency: str
+    status: TransactionStatus
+    previousStatus: TransactionStatus
+    type: TransactionType
+    method: PaymentMethod
+    mode: TransactionMode
+    failureReason: str | None
+    operatorTid: str | None
+
+
+@dataclass(frozen=True)
 class WebhookPayload:
     """Structured payload delivered to the merchant's webhook endpoint.
 
-    Merchants should verify the signature before trusting the data.
+    Merchants should verify the ``x-nylon-signature`` header before
+    trusting the data — the signature does NOT live in the body.
     """
 
+    delivery_id: str
     event: WebhookEventType
-    data: Transaction
+    payload: WebhookTransactionSnapshot
     timestamp: str
-    signature: str
 
 
 # --- Error types ---
@@ -629,8 +650,8 @@ class NylonPaySdk(Protocol):
         ...
 
     def create_invoice(self, **kwargs: Any) -> Result[InvoiceResponse, str]:
-        """Generate a hosted payment link. Card payments are only supported
-        via this hosted flow.
+        """Create an invoice and email it to the customer. The customer
+        receives a PDF invoice and a payment link for mobile money payment.
         """
         ...
 

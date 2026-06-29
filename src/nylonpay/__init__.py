@@ -62,6 +62,7 @@ from .types import (
     VerifyWebhookInput,
     WebhookEventType,
     WebhookPayload,
+    WebhookTransactionSnapshot,
 )
 from .verify_webhook import verify_webhook_signature
 
@@ -109,6 +110,7 @@ __all__ = [
     "VerifyWebhookInput",
     "WebhookEventType",
     "WebhookPayload",
+    "WebhookTransactionSnapshot",
     "create_nylon_pay",
     "create_sdk_error",
     "parse_error",

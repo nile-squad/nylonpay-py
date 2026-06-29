@@ -106,8 +106,9 @@ def test_list_of_dicts_single():
     data = {
         "amount": 10000,
         "currency": "UGX",
+        "customer_email": "buyer@example.com",
         "description": "Invoice #1",
-        "items": [{"name": "Widget", "quantity": 1, "unit_price": 5000}],
+        "items": [{"name": "Widget", "quantity": 1, "amount": 5000}],
     }
     result = coerce_dataclass(CreateInvoiceInput, data)
 
@@ -117,17 +118,18 @@ def test_list_of_dicts_single():
     assert isinstance(result.items[0], InvoiceItem)
     assert result.items[0].name == "Widget"
     assert result.items[0].quantity == 1
-    assert result.items[0].unit_price == 5000
+    assert result.items[0].amount == 5000
 
 
 def test_list_of_dicts_multiple():
     data = {
         "amount": 15000,
         "currency": "UGX",
+        "customer_email": "buyer@example.com",
         "description": "Invoice #2",
         "items": [
-            {"name": "Widget", "quantity": 2, "unit_price": 5000},
-            {"name": "Gadget", "quantity": 1, "unit_price": 5000},
+            {"name": "Widget", "quantity": 2, "amount": 5000},
+            {"name": "Gadget", "quantity": 1, "amount": 5000},
         ],
     }
     result = coerce_dataclass(CreateInvoiceInput, data)
@@ -142,13 +144,14 @@ def test_list_of_dicts_multiple():
 
 
 def test_mixed_list_dict_and_dataclass():
-    existing = InvoiceItem(name="Gadget", quantity=1, unit_price=3000)
+    existing = InvoiceItem(name="Gadget", quantity=1, amount=3000)
     data = {
         "amount": 8000,
         "currency": "UGX",
+        "customer_email": "buyer@example.com",
         "description": "Mixed",
         "items": [
-            {"name": "Widget", "quantity": 1, "unit_price": 5000},
+            {"name": "Widget", "quantity": 1, "amount": 5000},
             existing,
         ],
     }
@@ -269,13 +272,13 @@ def test_destination_all_fields():
 
 
 def test_invoice_item_from_dict():
-    data = {"name": "Service Fee", "quantity": 1, "unit_price": 2000}
+    data = {"name": "Service Fee", "quantity": 1, "amount": 2000}
     result = coerce_dataclass(InvoiceItem, data)
 
     assert isinstance(result, InvoiceItem)
     assert result.name == "Service Fee"
     assert result.quantity == 1
-    assert result.unit_price == 2000
+    assert result.amount == 2000
 
 
 # List of dicts with None items field ------------------------------------------
@@ -285,6 +288,7 @@ def test_none_items_field_stays_none():
     data = {
         "amount": 5000,
         "currency": "UGX",
+        "customer_email": "buyer@example.com",
         "description": "No items",
         "items": None,
     }

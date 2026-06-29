@@ -306,33 +306,40 @@ def test_verify_phone_normalizes_phone_in_wire(captured):
 # create_invoice ---------------------------------------------------------------
 
 
-def test_create_invoice_auto_generates_reference(captured):
+def test_create_invoice_returns_invoice_response(captured):
     def handler(req, cap):
-        body = cap["body"]
-        ref = body["payload"]["reference"]
         return httpx.Response(
             200,
             json=_success_response(
                 {
                     "id": "inv_1",
-                    "url": "https://pay.test/i/abc",
-                    "token": "tok_abc",
-                    "expiresAt": "2024-12-31",
+                    "invoice_number": "INV-001",
+                    "payment_link": "https://pay.test/i/abc",
+                    "amount": "1000",
+                    "currency": "UGX",
                     "status": "pending",
-                    "reference": ref,
                 }
             ),
         )
 
     sdk, client, cap = _make_sdk(handler)
     try:
-        result = sdk.create_invoice(amount=1000, currency="UGX", description="Invoice")
+        result = sdk.create_invoice(
+            amount=1000,
+            currency="UGX",
+            customer_email="customer@example.com",
+            description="Invoice",
+        )
         assert result.is_ok
-        assert result.value.id == "inv_1"
-        assert result.value.status == "pending"
-        # Reference was auto-generated (UUID v4)
-        wire_ref = cap["body"]["payload"]["reference"]
-        assert len(wire_ref) == 36
+        inv = result.value
+        assert inv.id == "inv_1"
+        assert inv.invoice_number == "INV-001"
+        assert inv.payment_link == "https://pay.test/i/abc"
+        assert inv.amount == "1000"
+        assert inv.currency == "UGX"
+        assert inv.status == "pending"
+        # Wire carries the customer email in camelCase
+        assert cap["body"]["payload"]["customerEmail"] == "customer@example.com"
     finally:
         client.close()
 
@@ -341,7 +348,12 @@ def test_create_invoice_validates_amount(captured):
     sdk, client, _ = _make_sdk(_default_handler)
     try:
         with pytest.raises(SdkException) as exc:
-            sdk.create_invoice(amount=100, currency="UGX", description="x")
+            sdk.create_invoice(
+                amount=100,
+                currency="UGX",
+                customer_email="customer@example.com",
+                description="x",
+            )
         assert exc.value.category == "validation"
     finally:
         client.close()
@@ -354,8 +366,9 @@ def test_create_invoice_items_negative_quantity_throws(captured):
             sdk.create_invoice(
                 amount=1000,
                 currency="UGX",
+                customer_email="customer@example.com",
                 description="x",
-                items=[{"name": "x", "quantity": -1, "unit_price": 100}],
+                items=[{"name": "x", "quantity": -1, "amount": 100}],
             )
         assert exc.value.category == "validation"
     finally:
