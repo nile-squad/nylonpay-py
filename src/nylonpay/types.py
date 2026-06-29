@@ -121,7 +121,7 @@ class InvoiceItem:
 
     name: str
     quantity: int
-    unit_price: int
+    amount: int
 
 
 @dataclass(frozen=True)
@@ -204,19 +204,21 @@ class VerifyPhoneInput:
 
 @dataclass(frozen=True)
 class CreateInvoiceInput:
-    """Input for creating a hosted invoice.
+    """Input for creating an invoice.
 
-    The returned URL renders a payment page where the customer completes
-    the transaction — including card payments (the only way to accept
-    cards, keeping the merchant out of PCI scope).
+    An invoice email is sent to the customer automatically. The returned
+    payment link directs the customer to a mobile-money payment page.
     """
 
     amount: int
     currency: Currency
-    description: str
+    customer_email: str
+    customer_name: str | None = None
+    customer_phone: str | None = None
+    description: str | None = None
+    due_date: str | None = None
     items: list[InvoiceItem] | None = None
-    redirect_url: str | None = None
-    reference: str | None = None
+    merchant_reference: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
 
@@ -345,17 +347,14 @@ class PhoneVerification:
 
 @dataclass(frozen=True)
 class InvoiceResponse:
-    """Response from creating an invoice.
-
-    The ``url`` is customer-facing; the ``token`` can be used to
-    idempotently re-fetch the invoice state.
-    """
+    """Response from creating an invoice."""
 
     id: str
-    url: str
-    token: str
-    expires_at: str
-    status: Literal["pending"]
+    invoice_number: str
+    payment_link: str
+    amount: str
+    currency: str
+    status: str
 
 
 @dataclass(frozen=True)
