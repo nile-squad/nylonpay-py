@@ -18,7 +18,7 @@ from __future__ import annotations
 # --- Defaults (overridable via NylonPayConfig) ---
 
 DEFAULT_BASE_URL = "https://api.nylonpay.nilesquad.com/api/services"
-DEFAULT_TIMEOUT_MS = 30_000
+DEFAULT_TIMEOUT_MS = 90_000
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_MAX_POLL_INTERVAL_MS = 2_000
 DEFAULT_MAX_POLL_DURATION_MS = 300_000
