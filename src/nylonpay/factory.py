@@ -13,8 +13,6 @@ from typing import Any
 
 from .config import (
     DEFAULT_BASE_URL,
-    DEFAULT_MAX_POLL_ATTEMPTS,
-    DEFAULT_MAX_POLL_DURATION_MS,
     DEFAULT_MAX_POLL_INTERVAL_MS,
     DEFAULT_MAX_RETRIES,
     DEFAULT_TIMEOUT_MS,
@@ -66,8 +64,9 @@ def create_nylon_pay(**kwargs: Any) -> NylonPaySdk:
         "timeout_ms": config.timeout_ms or DEFAULT_TIMEOUT_MS,
         "max_retries": config.max_retries or DEFAULT_MAX_RETRIES,
         "max_poll_interval_ms": config.max_poll_interval_ms or DEFAULT_MAX_POLL_INTERVAL_MS,
-        "max_poll_duration_ms": config.max_poll_duration_ms or DEFAULT_MAX_POLL_DURATION_MS,
-        "max_poll_attempts": config.max_poll_attempts or DEFAULT_MAX_POLL_ATTEMPTS,
+        "max_poll_duration_ms": config.max_poll_duration_ms,
+        "max_poll_attempts": config.max_poll_attempts,
+        "on_delayed": config.on_delayed or "wait",
         "http_client": config.http_client,
         "hooks": config.hooks,
     }

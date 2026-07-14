@@ -313,6 +313,7 @@ class Transaction:
     updated_at: str
     duplicate: bool | None = None
     operator_tid: str | None = None
+    delayed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -327,6 +328,7 @@ class StatusResponse:
     amount: int
     currency: Currency
     updated_at: str
+    delayed: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -542,6 +544,7 @@ class NylonPayConfig:
     max_poll_interval_ms: int | None = None
     max_poll_duration_ms: int | None = None
     max_poll_attempts: int | None = None
+    on_delayed: str | None = None
     force: bool = False
     hooks: SdkHooks | None = None
     http_client: httpx.Client | None = None

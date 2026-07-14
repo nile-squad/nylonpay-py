@@ -38,6 +38,8 @@ from .config import (
     SDK_ACTIONS,
 )
 from .payment import create_payment_instance
+from .poll_until_terminal import poll_until_terminal
+from .poll_interval import is_terminal_transaction_status
 from .phone import is_valid_phone_format, normalize_phone
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
@@ -240,7 +242,24 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         "poll_interval_ms": config.get("max_poll_interval_ms"),
         "max_poll_duration": config.get("max_poll_duration_ms"),
         "max_poll_attempts": config.get("max_poll_attempts"),
+        "on_delayed": config.get("on_delayed", "wait"),
     }
+
+    poll_deps: dict[str, Any] = {
+        "fetch_status": common_deps["fetch_status"],
+        "fetch_transaction": common_deps["fetch_transaction"],
+        "poll_interval_ms": config.get("max_poll_interval_ms"),
+        "max_poll_duration_ms": config.get("max_poll_duration_ms"),
+        "max_poll_attempts": config.get("max_poll_attempts"),
+        "on_delayed": config.get("on_delayed", "wait"),
+    }
+
+    def _continue_resolve_if_needed(
+        transaction: Transaction,
+    ) -> Result[Transaction, str]:
+        if is_terminal_transaction_status(transaction.status):
+            return Ok(transaction)
+        return poll_until_terminal({**poll_deps, "reference": transaction.reference})
 
     def _hook_result(result: Result[Any, str]) -> Result[InitiationResult, str]:
         """Build the ``InitiationResult`` passed to after-hooks."""
@@ -312,7 +331,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         )
 
         if result.is_ok:
-            return Ok(from_wire(Transaction, result.value))
+            return _continue_resolve_if_needed(from_wire(Transaction, result.value))
         return Err(result.error)
 
     # ------------------------------------------------------------------
@@ -374,7 +393,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         )
 
         if result.is_ok:
-            return Ok(from_wire(Transaction, result.value))
+            return _continue_resolve_if_needed(from_wire(Transaction, result.value))
         return Err(result.error)
 
     # ------------------------------------------------------------------

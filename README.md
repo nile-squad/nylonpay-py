@@ -61,8 +61,9 @@ Your API key determines the mode — `npk_sandbox_...` for test mode, `npk_live_
 | `timeout_ms` | No | `30000` | Request timeout in milliseconds |
 | `max_retries` | No | `3` | Retry count for failed requests |
 | `max_poll_interval_ms` | No | `2000` | Interval between status checks |
-| `max_poll_duration_ms` | No | `300000` | Maximum wait time for `wait()` (about 5 minutes) |
-| `max_poll_attempts` | No | `150` | Maximum status check attempts |
+| `max_poll_duration_ms` | No | *(none)* | Optional cap on total wait time. Omit to wait until terminal. |
+| `max_poll_attempts` | No | *(none)* | Optional cap on status checks. Omit to wait until terminal. |
+| `on_delayed` | No | `"wait"` | `"return"` hands back a delayed still-pending payment; `"wait"` keeps polling |
 | `force` | No | `False` | Bypass instance cache and create a fresh instance |
 | `hooks` | No | `None` | Lifecycle hooks (`SdkHooks`) for cross-cutting concerns |
 | `http_client` | No | `None` | `httpx.Client` for testing injection |
@@ -257,7 +258,7 @@ tx = payment.wait()
 
 ### wait()
 
-Block until terminal state. Returns `Transaction` on success, `None` on failure, cancellation, or error. Never raises.
+Block until terminal state. Returns `Transaction` on success, `None` on failure, cancellation, or error. Never raises. **Default:** waits until the payment finishes with no built-in time limit.
 
 ```python
 tx = payment.wait()
@@ -266,6 +267,23 @@ if tx is not None:
 else:
     print("failed or timed out")
 ```
+
+**Delayed payments (v1.4+):** After about three minutes in flight, responses may include `delayed=True`. Use `on_delayed="return"` to get the still-pending payment back and rely on webhooks:
+
+```python
+nylonpay = create_nylon_pay(
+    api_key="npk_test_...",
+    api_secret="nps_test_...",
+    on_delayed="return",
+)
+
+result = nylonpay.collect_payment_and_resolve(...)
+if result.is_ok and result.value.delayed and result.value.status == "pending":
+    # Still in flight — handle via webhooks
+    ...
+```
+
+Set `max_poll_duration_ms` to restore a bounded wait (~5 minutes previously).
 
 ## Error Handling
 

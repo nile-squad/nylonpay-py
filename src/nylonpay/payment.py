@@ -19,11 +19,10 @@ from types import SimpleNamespace
 from typing import Any, cast
 
 from .config import (
-    DEFAULT_MAX_POLL_ATTEMPTS,
-    DEFAULT_MAX_POLL_DURATION_MS,
     DEFAULT_MAX_POLL_INTERVAL_MS,
     POLL_JITTER_MS,
 )
+from .poll_interval import resolve_poll_interval_ms
 from .pubsub import create_emitter
 from .transport import parse_error
 from .types import (
@@ -98,8 +97,10 @@ def create_payment_instance(
         "fetch_status": deps["fetch_status"],
         "fetch_transaction": deps["fetch_transaction"],
         "poll_interval_ms": deps.get("poll_interval_ms", DEFAULT_MAX_POLL_INTERVAL_MS),
-        "max_poll_duration": deps.get("max_poll_duration", DEFAULT_MAX_POLL_DURATION_MS),
-        "max_poll_attempts": deps.get("max_poll_attempts", DEFAULT_MAX_POLL_ATTEMPTS),
+        "max_poll_duration": deps.get("max_poll_duration"),
+        "max_poll_attempts": deps.get("max_poll_attempts"),
+        "on_delayed": deps.get("on_delayed", "wait"),
+        "early_return_pending": False,
         "pending_error": None,
     }
 
@@ -158,6 +159,20 @@ def create_payment_instance(
         new_status = _normalize_status(response.status)
         set_status(new_status)
 
+        if (
+            response.delayed
+            and state["on_delayed"] == "return"
+            and new_status not in TERMINAL_STATES
+        ):
+            tx_result = state["fetch_transaction"](
+                GetTransactionInput(reference=state["reference"])
+            )
+            if tx_result.is_ok:
+                state["transaction"] = tx_result.value
+            state["early_return_pending"] = True
+            state["resolved"] = True
+            return
+
         # Dedupe by event, not raw status
         event = _status_to_event(new_status)
         if event is None or event == state["last_status_event"]:
@@ -175,7 +190,8 @@ def create_payment_instance(
         if state["resolved"]:
             return
 
-        if state["poll_attempts"] >= state["max_poll_attempts"]:
+        max_attempts = state["max_poll_attempts"]
+        if max_attempts is not None and state["poll_attempts"] >= max_attempts:
             emit_event(
                 "error",
                 error="Timed out waiting for the transaction status to update",
@@ -184,8 +200,9 @@ def create_payment_instance(
             state["resolved"] = True
             return
 
+        max_duration = state["max_poll_duration"]
         current_ms = time.time() * 1000
-        if current_ms - state["poll_start_time"] >= state["max_poll_duration"]:
+        if max_duration is not None and current_ms - state["poll_start_time"] >= max_duration:
             emit_event(
                 "error",
                 error="Timed out waiting for the transaction status to update",
@@ -239,8 +256,17 @@ def create_payment_instance(
                 poll_once()
                 if state["resolved"]:
                     break
-                delay = (state["poll_interval_ms"] + random.random() * POLL_JITTER_MS) / 1000
+                delay = (
+                    resolve_poll_interval_ms(
+                        base_interval_ms=state["poll_interval_ms"],
+                        poll_start_time_ms=state["poll_start_time"],
+                    )
+                    + random.random() * POLL_JITTER_MS
+                ) / 1000
                 time.sleep(delay)
+
+        if state.get("early_return_pending") and state["transaction"] is not None:
+            return state["transaction"]
 
         return state["transaction"] if state["status"] == "successful" else None
 
