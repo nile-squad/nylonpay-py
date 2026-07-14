@@ -46,6 +46,8 @@ def _create_sdk() -> NylonPaySdk:
         "api_key": API_KEY,
         "api_secret": API_SECRET,
         "force": True,
+        # Cap client polling so unbounded wait/AndResolve cannot hang the suite.
+        "max_poll_duration_ms": 60_000,
     }
     if BASE_URL:
         kwargs["base_url"] = BASE_URL

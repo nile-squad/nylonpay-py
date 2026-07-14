@@ -268,7 +268,7 @@ else:
     print("failed or timed out")
 ```
 
-**Delayed payments (v1.4+):** After about three minutes in flight, responses may include `delayed=True`. Use `on_delayed="return"` to get the still-pending payment back and rely on webhooks:
+**Delayed payments (v0.4+):** After about three minutes in flight, responses may include `delayed=True`. Use `on_delayed="return"` to get the still-pending payment back and rely on webhooks:
 
 ```python
 nylonpay = create_nylon_pay(
