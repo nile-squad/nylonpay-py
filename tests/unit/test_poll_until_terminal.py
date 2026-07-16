@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
-from nylonpay.slang import Ok
-
 from nylonpay.poll_until_terminal import poll_until_terminal
+from nylonpay.slang import Ok
 from nylonpay.types import StatusResponse, Transaction
 
 

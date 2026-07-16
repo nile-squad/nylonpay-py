@@ -38,9 +38,9 @@ from .config import (
     SDK_ACTIONS,
 )
 from .payment import create_payment_instance
-from .poll_until_terminal import poll_until_terminal
-from .poll_interval import is_terminal_transaction_status
 from .phone import is_valid_phone_format, normalize_phone
+from .poll_interval import is_terminal_transaction_status
+from .poll_until_terminal import poll_until_terminal
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
 from .types import (

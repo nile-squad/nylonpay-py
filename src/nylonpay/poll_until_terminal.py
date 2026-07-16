@@ -6,10 +6,9 @@ import random
 import time
 from typing import Any, Literal
 
-from .slang import Err, Ok, Result
-
 from .config import POLL_JITTER_MS
 from .poll_interval import is_terminal_transaction_status, resolve_poll_interval_ms
+from .slang import Err, Ok, Result
 from .transport import parse_error
 from .types import GetStatusInput, GetTransactionInput, StatusResponse, Transaction
 
