@@ -1,6 +1,6 @@
 [project]
 name = "nylonpay-py"
-version = "0.4.0"
+version = "0.5.0"
 description = "Nylon Pay SDK for merchant integrations"
 readme = "README.md"
 license = { file = "LICENSE" }

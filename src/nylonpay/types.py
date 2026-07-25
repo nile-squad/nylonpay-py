@@ -34,6 +34,7 @@ from .slang import Result
 TransactionStatus = Literal[
     "pending",
     "processing",
+    "on_hold",
     "successful",
     "failed",
     "cancelled",
@@ -313,6 +314,7 @@ class Transaction:
     updated_at: str
     duplicate: bool | None = None
     operator_tid: str | None = None
+    status_text: str | None = None
     delayed: bool | None = None
 
 
@@ -328,6 +330,7 @@ class StatusResponse:
     amount: int
     currency: Currency
     updated_at: str
+    status_text: str | None = None
     delayed: bool | None = None
 
 
@@ -377,6 +380,7 @@ class WebhookTransactionSnapshot:
     mode: TransactionMode
     failureReason: str | None
     operatorTid: str | None
+    statusText: str | None = None
 
 
 @dataclass(frozen=True)

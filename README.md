@@ -164,6 +164,55 @@ if result.is_ok:
     print("Payout completed:", result.value.reference)
 ```
 
+## Payout Lifecycle
+
+`make_payout` returns immediately with a `reference` for tracking and idempotent retries. The payout status flows through several stages:
+
+- **`pending`** — Payout accepted and queued for processing
+- **`processing`** — Provider is actively handling the disbursement
+- **`on_hold`** — Payout is under review (liquidity or compliance checks). Non-terminal; will complete to `successful`, `failed`, or `cancelled`.
+- **`successful`** — Payout completed; funds sent to destination
+- **`failed`** — Payout failed; funds refunded to merchant account
+- **`cancelled`** — Payout was cancelled by the merchant
+
+**Polling and webhooks:** Monitor payout progress by:
+1. Subscribing to `"processing"` events (covers `pending`, `processing`, and `on_hold` states)
+2. Listening for terminal events: `"success"`, `"failed"`, `"cancelled"`
+3. Receiving webhook notifications at your configured endpoint
+
+The SDK treats `on_hold` as a non-terminal status — polling continues automatically until the payout reaches a terminal state. Use the `status_text` field for human-readable details about review holds.
+
+```python
+payout = nylonpay.make_payout(
+    amount=50000,
+    currency="UGX",
+    customer={"name": "Jane", "phone_number": "+256700000000"},
+    destination={
+        "account_holder_name": "Jane Doe",
+        "account_number": "123456",
+    },
+    description="Refund for order #1234",
+)
+
+def on_processing(data):
+    # Payout is in flight (pending, processing, or on_hold)
+    if data.transaction and data.transaction.status == "on_hold":
+        print("Payout under review:", data.transaction.status_text)
+        # "Payout is being reviewed and will complete shortly"
+
+payout.on("processing", on_processing)
+
+def on_success(data):
+    print("Payout complete:", data.transaction.reference)
+
+payout.on("success", on_success)
+
+# Or wait for terminal state
+tx = payout.wait()
+if tx is not None:
+    print("Final status:", tx.status)
+```
+
 ### get_status
 
 One-shot status check for a transaction. Does not wait — returns the current server-side state.
@@ -239,11 +288,13 @@ The verification checks authenticity and freshness. Pass `tolerance_seconds=0` t
 
 | Event | Description |
 |---|---|
-| `processing` | Transaction is being processed |
+| `processing` | Transaction is being processed (covers `pending`, `processing`, and `on_hold` states) |
 | `success` | Transaction completed successfully |
 | `failed` | Transaction failed |
 | `cancelled` | Transaction was cancelled |
 | `error` | Network or server error |
+
+For payouts specifically, `on_hold` indicates the payout is under review (liquidity or compliance checks). Polling continues automatically; use `transaction?.status_text` for a human-readable explanation.
 
 ```python
 def on_success(data):
