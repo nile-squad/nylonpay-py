@@ -24,6 +24,7 @@ from nylonpay import (
 )
 from nylonpay.signature import create_canonical_payload
 from nylonpay.transport import SdkException
+from nylonpay.verify_webhook import DISABLE_FRESHNESS_CHECK
 
 API_KEY = "npk_test_sdk_unit"
 API_SECRET = "nps_test_sdk_unit_secret"
@@ -37,10 +38,15 @@ def _sign(data: dict, secret: str = API_SECRET) -> str:
     ).hexdigest()
 
 
-def _success_response(data: dict) -> dict:
-    """Build a wire response with a valid signature for ``data``."""
-    sig = _sign(data)
-    return {"status": True, "message": "ok", "data": {**data, "_responseSignature": sig}}
+def _success_response(data: dict, request=None) -> dict:
+    """Build a wire response with a valid signature for ``data``.
+
+    Echoes the request nonce inside the signed data, exactly as the backend
+    does — the SDK rejects a response that does not answer the request it sent.
+    """
+    nonce = request.headers.get("x-nylon-nonce", "") if request is not None else ""
+    bound = {**data, "_requestNonce": nonce}
+    return {"status": True, "message": "ok", "data": {**bound, "_responseSignature": _sign(bound)}}
 
 
 @pytest.fixture
@@ -78,7 +84,7 @@ def _default_handler(req, cap):
     body = cap.get("body") or {}
     payload = body.get("payload", {})
     ref = payload.get("reference", "ref_abc")
-    return httpx.Response(200, json=_success_response({"reference": ref, "status": "pending"}))
+    return httpx.Response(200, json=_success_response({"reference": ref, "status": "pending"}, req))
 
 
 def _collect_input(**overrides) -> dict[str, Any]:
@@ -206,7 +212,8 @@ def test_get_status_returns_snake_case_fields(captured):
                     "amount": 1000,
                     "currency": "UGX",
                     "updatedAt": "2024-01-01T00:00:00Z",
-                }
+                },
+                req,
             ),
         )
 
@@ -248,7 +255,7 @@ def test_get_transaction_returns_snake_case_fields(captured):
     }
 
     def handler(req, cap):
-        return httpx.Response(200, json=_success_response(tx))
+        return httpx.Response(200, json=_success_response(tx, req))
 
     sdk, client, _ = _make_sdk(handler)
     try:
@@ -288,7 +295,8 @@ def test_verify_phone_normalizes_phone_in_wire(captured):
                     "phoneNumber": "256700000000",
                     "customerName": "Alice",
                     "verified": True,
-                }
+                },
+                req,
             ),
         )
 
@@ -318,7 +326,8 @@ def test_create_invoice_returns_invoice_response(captured):
                     "amount": "1000",
                     "currency": "UGX",
                     "status": "pending",
-                }
+                },
+                req,
             ),
         )
 
@@ -384,15 +393,36 @@ def test_verify_webhook_signature_delegates_to_standalone(captured):
         body = json.dumps({"timestamp": "1700000000000", "data": "x"}).encode()
         sig = hmac.new(API_SECRET.encode(), body, hashlib.sha256).hexdigest()
         inp = VerifyWebhookInput(
-            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=0
+            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
         )
         # Standalone
         standalone_result = verify_webhook_signature(inp)
         # Via SDK (kwargs form)
         sdk_result = sdk.verify_webhook_signature(
-            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=0
+            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
         )
         assert standalone_result is True
         assert sdk_result == standalone_result
     finally:
         client.close()
+
+
+def test_reference_with_trailing_newline_is_rejected():
+    """Python's `$` also matches before a trailing newline, so `re.match` would
+    accept "<uuid>\n" — a value the TypeScript SDK's identical regex rejects.
+    The reference is a cross-language contract and an idempotency key, so both
+    SDKs must accept exactly the same strings.
+    """
+    from nylonpay.sdk import _resolve_reference
+    from nylonpay.transport import SdkException
+
+    valid = "11111111-1111-1111-1111-111111111111"
+    assert _resolve_reference(valid) == valid
+
+    for bad in (valid + "\n", valid + "\r\n", "\n" + valid, valid + " "):
+        try:
+            _resolve_reference(bad)
+        except SdkException as exc:
+            assert exc.category == "validation"
+        else:
+            raise AssertionError(f"accepted malformed reference: {bad!r}")

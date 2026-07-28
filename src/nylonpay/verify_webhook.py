@@ -19,6 +19,16 @@ from .types import VerifyWebhookInput
 
 DEFAULT_TOLERANCE_SECONDS = 300
 
+DISABLE_FRESHNESS_CHECK = -1
+"""Explicit opt-out of the freshness check.
+
+Must be passed deliberately. ``tolerance_seconds=0`` does NOT disable the
+check — it means a tolerance of zero seconds, i.e. as strict as it gets, which
+in practice rejects almost everything. That is the safe reading: a developer
+reaching for ``0`` is asking for maximum strictness, and previously got the
+exact opposite (no freshness check at all, silently).
+"""
+
 
 def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
     """Verify that a webhook payload was genuinely sent by Nylon Pay.
@@ -27,8 +37,9 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
 
     1. **Authenticity** — HMAC-SHA256 over raw payload bytes matches the signature.
     2. **Freshness** — the timestamp inside the signed body is within
-       ``tolerance_seconds`` of now (default 300s). Pass ``tolerance_seconds=0``
-       to disable the freshness check.
+       ``tolerance_seconds`` of now (default 300s). ``0`` means a tolerance of
+       zero seconds (maximum strictness), NOT "off"; pass
+       ``tolerance_seconds=DISABLE_FRESHNESS_CHECK`` to opt out deliberately.
 
     Returns ``True`` only when both checks pass. Never raises.
     """
@@ -59,7 +70,7 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
         if input.tolerance_seconds is not None
         else DEFAULT_TOLERANCE_SECONDS
     )
-    if tolerance == 0:
+    if tolerance == DISABLE_FRESHNESS_CHECK:
         return True
     if tolerance < 0:
         return False

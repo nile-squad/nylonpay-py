@@ -200,17 +200,42 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
             )
 
             try:
-                response = client.post(
+                # Streamed, not buffered: the cap has to be enforced WHILE the
+                # body is read. A plain post() reads the whole response into
+                # memory before any size check can run, so the guard could only
+                # discard an oversized body after already paying its memory
+                # cost — and did nothing at all when the server sent no
+                # Content-Length (chunked). Reading in chunks with a running
+                # total bounds peak memory whatever the server claims.
+                with client.stream(
+                    "POST",
                     base_url,
                     content=body_string,
                     headers=headers,
                     timeout=timeout,
-                )
+                ) as response:
+                    declared_length = response.headers.get("content-length")
+                    if declared_length and int(declared_length) > _MAX_RESPONSE_BYTES:
+                        sdk_error = SdkError(
+                            category="internal",
+                            message="Received an invalid response from the server",
+                            retryable=False,
+                        )
+                        return Err(_serialize_error(sdk_error))
 
-                # Reject oversized responses before parsing — a compromised
-                # server could return a multi-GB body to exhaust memory.
-                content_length = response.headers.get("content-length")
-                if content_length and int(content_length) > _MAX_RESPONSE_BYTES:
+                    status_code = response.status_code
+                    reason_phrase = response.reason_phrase
+                    body_buffer = bytearray()
+                    oversized = False
+                    for chunk in response.iter_bytes():
+                        body_buffer.extend(chunk)
+                        if len(body_buffer) > _MAX_RESPONSE_BYTES:
+                            # Stop reading immediately — leaving the `with`
+                            # block closes the connection mid-body.
+                            oversized = True
+                            break
+
+                if oversized:
                     sdk_error = SdkError(
                         category="internal",
                         message="Received an invalid response from the server",
@@ -218,18 +243,19 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     )
                     return Err(_serialize_error(sdk_error))
 
-                if not (200 <= response.status_code <= 299):
-                    status_code = response.status_code
+                raw_body = bytes(body_buffer)
+
+                if not (200 <= status_code <= 299):
                     retryable = status_code in RETRYABLE_STATUS_CODES
 
                     error_message = f"HTTP {status_code}"
-                    body_result = Result.try_(lambda: response.json())
+                    body_result = Result.try_(lambda: json.loads(raw_body))
                     if body_result.is_ok:
                         error_body = body_result.value
                         if isinstance(error_body, dict) and "message" in error_body:
                             error_message = str(error_body["message"])
                     else:
-                        error_message = response.reason_phrase or error_message
+                        error_message = reason_phrase or error_message
 
                     if retryable and current_attempt < max_retries:
                         backoff = _calculate_backoff(current_attempt)
@@ -240,7 +266,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     return Err(_serialize_error(sdk_error))
 
                 # Status 200 — parse response body
-                response_body = response.json()
+                response_body = json.loads(raw_body)
 
                 if not isinstance(response_body, dict) or "status" not in response_body:
                     return Err(
@@ -288,7 +314,23 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                             )
                         )
 
-                    return Ok(stripped_data)
+                    # The signature proves who produced this; the echoed nonce
+                    # proves it answers the request we just sent, and is not an
+                    # earlier response replayed. It is signed, so it is as
+                    # trustworthy as the signature once the HMAC verifies.
+                    unbound_data, echoed_nonce = _strip_request_nonce(stripped_data)
+                    if echoed_nonce != headers.get("x-nylon-nonce"):
+                        return Err(
+                            _serialize_error(
+                                SdkError(
+                                    category="internal",
+                                    message="Could not verify the server response",
+                                    retryable=False,
+                                )
+                            )
+                        )
+
+                    return Ok(unbound_data)
 
                 # status === False
                 parsed_error = parse_error(message)
@@ -372,6 +414,23 @@ def _build_auth_headers(
         "x-nylon-signature": signature,
         "x-nylon-timestamp": timestamp,
     }
+
+
+def _strip_request_nonce(data: Any) -> tuple[Any, str | None]:
+    """Strip the echoed ``_requestNonce`` and return it separately.
+
+    Returns ``(data_without_nonce, nonce)``; nonce is ``None`` when the field
+    is absent or not a string. The backend signs this value into the response,
+    so comparing it against the nonce we sent is what binds a response to the
+    request it answers — without it a captured response stays validly signed
+    forever and can be replayed to a later call.
+    """
+    if not isinstance(data, dict) or "_requestNonce" not in data:
+        return data, None
+
+    rest = {k: v for k, v in data.items() if k != "_requestNonce"}
+    nonce = data.get("_requestNonce")
+    return rest, nonce if isinstance(nonce, str) else None
 
 
 def _strip_response_signature(data: Any) -> tuple[Any, str | None]:

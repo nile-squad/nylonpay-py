@@ -37,6 +37,7 @@ from nylonpay.transport import (
 )
 from nylonpay.verify_response import verify_response_signature
 from nylonpay.wire import to_wire
+from nylonpay.verify_webhook import DISABLE_FRESHNESS_CHECK
 
 SECRET = "nps_test_security_secret_xyz"
 
@@ -229,7 +230,7 @@ def _signed_webhook(body: dict, secret: str = SECRET) -> tuple[bytes, str]:
 def test_S8_valid_signature_accepted():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     body_bytes, sig = _signed_webhook(body)
-    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=0)
+    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
     assert verify_webhook_signature(inp) is True
 
 
@@ -237,14 +238,14 @@ def test_S8_tampered_body_rejected():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     _, sig = _signed_webhook(body)
     tampered = json.dumps({"timestamp": str(int(time.time() * 1000)), "data": "Y"}).encode()
-    inp = VerifyWebhookInput(payload=tampered, signature=sig, secret=SECRET, tolerance_seconds=0)
+    inp = VerifyWebhookInput(payload=tampered, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
     assert verify_webhook_signature(inp) is False
 
 
 def test_S8_wrong_secret_rejected():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     body_bytes, sig = _signed_webhook(body, "wrong_secret")
-    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=0)
+    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
     assert verify_webhook_signature(inp) is False
 
 
@@ -252,7 +253,7 @@ def test_S8_malformed_signature_no_throw():
     body = {"timestamp": str(int(time.time() * 1000))}
     body_bytes, _ = _signed_webhook(body)
     inp = VerifyWebhookInput(
-        payload=body_bytes, signature="not-a-real-sig!!!", secret=SECRET, tolerance_seconds=0
+        payload=body_bytes, signature="not-a-real-sig!!!", secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
     )
     assert verify_webhook_signature(inp) is False
 
@@ -269,9 +270,9 @@ def test_S9_compare_digest_handles_different_lengths():
     assert verify_response_signature({"a": 1}, "a" * 64, SECRET) is False
     # Webhook: different lengths
     body = json.dumps({"timestamp": "1700000000000"}).encode()
-    inp_short = VerifyWebhookInput(payload=body, signature="ab", secret=SECRET, tolerance_seconds=0)
+    inp_short = VerifyWebhookInput(payload=body, signature="ab", secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
     inp_long = VerifyWebhookInput(
-        payload=body, signature="a" * 200, secret=SECRET, tolerance_seconds=0
+        payload=body, signature="a" * 200, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
     )
     assert verify_webhook_signature(inp_short) is False
     assert verify_webhook_signature(inp_long) is False
@@ -351,7 +352,17 @@ def test_S11_valid_signature_accepted():
     def handler(req):
         return httpx.Response(
             200,
-            json={"status": True, "message": "ok", "data": {**data, "_responseSignature": sig}},
+            json={
+                "status": True,
+                "message": "ok",
+                "data": {
+                    **data,
+                    "_requestNonce": req.headers.get("x-nylon-nonce", ""),
+                    "_responseSignature": _sign(
+                        {**data, "_requestNonce": req.headers.get("x-nylon-nonce", "")}
+                    ),
+                },
+            },
         )
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
@@ -467,7 +478,7 @@ def test_S14_timestamp_is_signed():
     fresh_ms = int(time.time() * 1000)
     body2_bytes = json.dumps({"timestamp": str(fresh_ms), "data": "x"}).encode()
     inp = VerifyWebhookInput(
-        payload=body2_bytes, signature=sig1, secret=SECRET, tolerance_seconds=0
+        payload=body2_bytes, signature=sig1, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
     )
     # The signature was over body1 (with stale timestamp), not body2
     assert verify_webhook_signature(inp) is False

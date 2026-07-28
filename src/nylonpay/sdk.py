@@ -86,10 +86,18 @@ def _throw_validation(message: str) -> NoReturn:
 
 
 def _resolve_reference(reference: str | None) -> str:
-    """Auto-generate a UUID v4 when *None*, else validate UUID format."""
+    """Auto-generate a UUID v4 when *None*, else validate UUID format.
+
+    Uses ``fullmatch``, not ``match``: Python's ``$`` also matches immediately
+    before a single trailing newline, so ``re.match`` accepts
+    ``"<uuid>\\n"`` — a value the TypeScript SDK's identical-looking regex
+    rejects, since JavaScript's ``$`` has no such exception. The reference is a
+    cross-language spec contract and is used downstream as an idempotency and
+    lookup key, so both SDKs must accept exactly the same set of strings.
+    """
     if reference is None:
         return _generate_reference()
-    if not re.match(UUID_REGEX, reference):
+    if not re.fullmatch(UUID_REGEX, reference):
         _throw_validation("reference must be a valid UUID")
     return reference
 

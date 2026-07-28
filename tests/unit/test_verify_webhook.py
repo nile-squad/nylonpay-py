@@ -8,7 +8,10 @@ import json
 import time
 
 from nylonpay.types import VerifyWebhookInput
-from nylonpay.verify_webhook import verify_webhook_signature
+from nylonpay.verify_webhook import (
+    DISABLE_FRESHNESS_CHECK,
+    verify_webhook_signature,
+)
 
 SECRET = "whsec_test_xyz"
 
@@ -81,10 +84,18 @@ def test_no_timestamp_fails_closed():
     assert verify_webhook_signature(_make_input(body)) is False
 
 
-def test_tolerance_zero_skips_freshness():
+def test_tolerance_zero_means_strict_not_disabled():
+    """A developer passing 0 means "strictest", and used to silently get "off"."""
     body = {"timestamp": str(int(time.time() * 1000) - 10_000_000), "data": "foo"}
-    # Stale, but tolerance=0 disables freshness check
-    assert verify_webhook_signature(_make_input(body, tolerance=0)) is True
+    assert verify_webhook_signature(_make_input(body, tolerance=0)) is False
+
+
+def test_disable_sentinel_is_the_deliberate_opt_out():
+    body = {"timestamp": str(int(time.time() * 1000) - 10_000_000), "data": "foo"}
+    result = verify_webhook_signature(
+        _make_input(body, tolerance=DISABLE_FRESHNESS_CHECK)
+    )
+    assert result is True
 
 
 # Timestamp formats -------------------------------------------------------------

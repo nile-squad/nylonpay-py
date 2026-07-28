@@ -15,8 +15,30 @@ Upgrading from 0.4.0, the previously published release.
   `tolerance_seconds=0`, you can now remove that workaround and get replay
   protection back.
 
+### Security
+
+- **Signed responses are now bound to the request that asked for them.** The
+  backend echoes the request's nonce inside the signed payload and the SDK
+  requires it to match. Previously any response the backend had ever produced
+  stayed validly signed forever and could be replayed onto a later call for the
+  same reference. **Requires a backend that echoes the nonce; it is deployed
+  first.**
+- **`tolerance_seconds=0` no longer disables webhook replay protection.** It now
+  means a tolerance of zero seconds — maximum strictness. Reaching for `0` to
+  mean "strictest" previously turned the freshness check off entirely, silently.
+  Pass `DISABLE_FRESHNESS_CHECK` to opt out deliberately.
+- **The response body size cap is enforced while reading.** The transport now
+  streams the response and aborts once the cap is exceeded; the old check read
+  `Content-Length` after httpx had already buffered the whole body, so it never
+  bounded peak memory and did nothing at all for a chunked response.
+- **`reference` validation now uses whole-string matching.** Python's `$` also
+  matches before a trailing newline, so `"<uuid>\n"` was accepted here while the
+  TypeScript SDK rejected it — the reference is a cross-language contract and an
+  idempotency key.
+
 ### Breaking
 
+- **`tolerance_seconds=0` flips meaning** (see Security above).
 - **`WebhookTransactionSnapshot` field types now match what the backend
   actually sends.** `amount` and `currency` are `str | None`; `type`, `method`,
   and `mode` are `T | None`. These fields could always arrive null.
