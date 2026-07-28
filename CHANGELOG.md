@@ -38,6 +38,12 @@ Upgrading from 0.4.0, the previously published release.
 
 ### Breaking
 
+- **`InvoiceItem.amount` renamed to `unit_price`** (`unitPrice` on the wire).
+  The backend has always required it under that name; the SDK dataclass and the
+  spec both said `amount`, so `create_invoice` with line items failed
+  validation for every merchant who followed the documented shape. Rename the
+  field in your item objects — the value is unchanged (price per unit, smallest
+  currency unit).
 - **`tolerance_seconds=0` flips meaning** (see Security above).
 - **`WebhookTransactionSnapshot` field types now match what the backend
   actually sends.** `amount` and `currency` are `str | None`; `type`, `method`,

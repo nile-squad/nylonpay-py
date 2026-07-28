@@ -522,11 +522,11 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
                 ):
                     _throw_validation("item quantity must be a positive integer")
                 if (
-                    not isinstance(item.amount, int)
-                    or isinstance(item.amount, bool)
-                    or item.amount <= 0
+                    not isinstance(item.unit_price, int)
+                    or isinstance(item.unit_price, bool)
+                    or item.unit_price <= 0
                 ):
-                    _throw_validation("item amount must be a positive integer")
+                    _throw_validation("item unit_price must be a positive integer")
 
         result = transport["send"](
             {"action": SDK_ACTIONS["create_invoice"], "payload": to_wire(input)}

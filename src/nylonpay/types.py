@@ -119,7 +119,9 @@ class InvoiceItem:
 
     name: str
     quantity: int
-    amount: int
+    #: Price per unit in the smallest currency unit (e.g. UGX shillings).
+    #: Serialized to the wire as ``unitPrice``.
+    unit_price: int
 
 
 @dataclass(frozen=True)

@@ -377,7 +377,7 @@ def test_create_invoice_items_negative_quantity_throws(captured):
                 currency="UGX",
                 customer_email="customer@example.com",
                 description="x",
-                items=[{"name": "x", "quantity": -1, "amount": 100}],
+                items=[{"name": "x", "quantity": -1, "unit_price": 100}],
             )
         assert exc.value.category == "validation"
     finally:
