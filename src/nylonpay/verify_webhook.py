@@ -41,6 +41,11 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
         hashlib.sha256,
     ).hexdigest()
 
+    # One canonical signature: lowercase hex, byte-for-byte what Nylon Pay
+    # sends in `x-nylon-signature`. Any other spelling of the same value —
+    # uppercase hex in particular — is rejected rather than normalized, so
+    # there is exactly one accepted form and both SDKs agree on it.
+
     # Length guard before constant-time comparison
     if len(input.signature) != len(expected):
         return False
@@ -76,6 +81,19 @@ def _decode_payload(payload: str | bytes) -> bytes:
     return payload.encode("utf-8")
 
 
+def _normalize_iso(raw: str) -> str:
+    """Make a UTC-suffixed ISO 8601 string parseable on every supported Python.
+
+    Nylon Pay stamps deliveries with JavaScript's ``toISOString()``, which ends
+    in ``Z``. ``datetime.fromisoformat`` only learned to accept that in 3.11,
+    so on 3.10 — which this package supports — every genuine webhook would
+    otherwise fail the freshness check and be rejected as a replay.
+    """
+    if raw.endswith(("Z", "z")):
+        return raw[:-1] + "+00:00"
+    return raw
+
+
 def _extract_signed_timestamp_ms(payload_string: str) -> int | None:
     """Pull the signed ``timestamp`` out of a verified webhook body.
 
@@ -105,7 +123,7 @@ def _extract_signed_timestamp_ms(payload_string: str) -> int | None:
             num = num_result.value
             return int(num * 1000) if num < 1e12 else int(num)
         # Try ISO 8601
-        dt_result = Result.try_(lambda: datetime.fromisoformat(raw))
+        dt_result = Result.try_(lambda: datetime.fromisoformat(_normalize_iso(raw)))
         if dt_result.is_ok:
             dt = dt_result.value
             if dt.tzinfo is None:

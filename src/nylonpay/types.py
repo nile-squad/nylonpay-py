@@ -371,16 +371,21 @@ class WebhookTransactionSnapshot:
 
     transactionId: str
     reference: str
-    amount: str
-    currency: str
+    # ``None`` in the rare case where the backend could not read the
+    # transaction record while dispatching. ``transactionId`` and ``status``
+    # are always present, so reconcile with ``get_status`` if you see one.
+    amount: str | None
+    currency: str | None
     status: TransactionStatus
     previousStatus: TransactionStatus
-    type: TransactionType
-    method: PaymentMethod
-    mode: TransactionMode
+    # These three are ``None`` whenever the backend has no value stored for
+    # the transaction (older rows especially) — it sends the key with an
+    # explicit null rather than omitting it.
+    type: TransactionType | None
+    method: PaymentMethod | None
+    mode: TransactionMode | None
     failureReason: str | None
     operatorTid: str | None
-    statusText: str | None = None
 
 
 @dataclass(frozen=True)

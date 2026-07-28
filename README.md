@@ -267,17 +267,29 @@ if result.is_ok:
 Verify incoming webhook payloads before processing. Operates on raw payload bytes or string — never re-serialize parsed JSON, which would alter the signed content.
 
 ```python
-from nylonpay import verify_webhook_signature
+from nylonpay import VerifyWebhookInput, verify_webhook_signature
 
 is_valid = verify_webhook_signature(
-    payload=raw_payload_bytes,
-    signature=signature_header,
-    secret="nps_...",
+    VerifyWebhookInput(
+        payload=raw_payload_bytes,
+        signature=signature_header,
+        secret="nps_...",
+    )
 )
 
 if not is_valid:
     # Reject — payload did not originate from Nylon Pay
     ...
+```
+
+The standalone function takes a single `VerifyWebhookInput`. The client method is the keyword-argument variant of the same check:
+
+```python
+is_valid = nylonpay.verify_webhook_signature(
+    payload=raw_payload_bytes,
+    signature=signature_header,
+    secret="nps_...",
+)
 ```
 
 The verification checks authenticity and freshness. Pass `tolerance_seconds=0` to disable the freshness check. Returns `True` only when both checks pass. Never raises.

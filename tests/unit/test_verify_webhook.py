@@ -101,6 +101,73 @@ def test_iso_8601_timestamp_works():
     assert verify_webhook_signature(_make_input(body)) is True
 
 
+def test_backend_isoformat_with_milliseconds_and_z_works():
+    """The exact shape the backend sends: JS toISOString(), e.g.
+    '2026-05-30T10:30:15.000Z'.
+
+    datetime.fromisoformat only accepts the trailing 'Z' from Python 3.11 on.
+    Without normalization this returns False on 3.10 — a supported version —
+    meaning every genuine webhook is rejected as unverifiable.
+    """
+    iso = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime())
+    body = {"timestamp": iso, "data": "foo"}
+    assert verify_webhook_signature(_make_input(body)) is True
+
+
+def test_lowercase_z_suffix_works():
+    iso = time.strftime("%Y-%m-%dT%H:%M:%S.000z", time.gmtime())
+    body = {"timestamp": iso, "data": "foo"}
+    assert verify_webhook_signature(_make_input(body)) is True
+
+
+def test_stale_iso_timestamp_still_rejected():
+    """Normalizing 'Z' must not weaken replay protection."""
+    stale = time.strftime("%Y-%m-%dT%H:%M:%S.000Z", time.gmtime(time.time() - 600))
+    body = {"timestamp": stale, "data": "foo"}
+    assert verify_webhook_signature(_make_input(body)) is False
+
+
+# Signature casing --------------------------------------------------------------
+
+
+def test_uppercase_hex_signature_rejected():
+    """One canonical signature form: lowercase hex, exactly as sent.
+
+    The same value spelled in uppercase is rejected rather than normalized,
+    so there is one accepted form and both SDKs agree on it.
+    """
+    body = {"timestamp": str(int(time.time() * 1000)), "data": "foo"}
+    body_bytes = json.dumps(body).encode("utf-8")
+    inp = VerifyWebhookInput(
+        payload=body_bytes,
+        signature=_sign_raw(body_bytes).upper(),
+        secret=SECRET,
+    )
+    assert verify_webhook_signature(inp) is False
+
+
+def test_canonical_lowercase_signature_accepted():
+    body = {"timestamp": str(int(time.time() * 1000)), "data": "foo"}
+    body_bytes = json.dumps(body).encode("utf-8")
+    signature = _sign_raw(body_bytes)
+    assert signature == signature.lower()
+    inp = VerifyWebhookInput(
+        payload=body_bytes, signature=signature, secret=SECRET
+    )
+    assert verify_webhook_signature(inp) is True
+
+
+def test_uppercase_hex_of_wrong_signature_still_rejected():
+    body = {"timestamp": str(int(time.time() * 1000)), "data": "foo"}
+    body_bytes = json.dumps(body).encode("utf-8")
+    inp = VerifyWebhookInput(
+        payload=body_bytes,
+        signature=_sign_raw(body_bytes, "wrong-secret").upper(),
+        secret=SECRET,
+    )
+    assert verify_webhook_signature(inp) is False
+
+
 def test_numeric_int_timestamp_works():
     body = {"timestamp": int(time.time() * 1000), "data": "foo"}
     # Sign the JSON-serialized body
