@@ -36,10 +36,24 @@ from nylonpay.transport import (
     parse_error,
 )
 from nylonpay.verify_response import verify_response_signature
-from nylonpay.wire import to_wire
 from nylonpay.verify_webhook import DISABLE_FRESHNESS_CHECK
+from nylonpay.wire import to_wire
 
 SECRET = "nps_test_security_secret_xyz"
+
+
+def _webhook_input(
+    *,
+    payload: bytes,
+    signature: str,
+    secret: str = SECRET,
+) -> VerifyWebhookInput:
+    return VerifyWebhookInput(
+        payload=payload,
+        signature=signature,
+        secret=secret,
+        tolerance_seconds=DISABLE_FRESHNESS_CHECK,
+    )
 
 
 def _sign(data: dict, secret: str = SECRET) -> str:
@@ -230,7 +244,7 @@ def _signed_webhook(body: dict, secret: str = SECRET) -> tuple[bytes, str]:
 def test_S8_valid_signature_accepted():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     body_bytes, sig = _signed_webhook(body)
-    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
+    inp = _webhook_input(payload=body_bytes, signature=sig)
     assert verify_webhook_signature(inp) is True
 
 
@@ -238,23 +252,21 @@ def test_S8_tampered_body_rejected():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     _, sig = _signed_webhook(body)
     tampered = json.dumps({"timestamp": str(int(time.time() * 1000)), "data": "Y"}).encode()
-    inp = VerifyWebhookInput(payload=tampered, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
+    inp = _webhook_input(payload=tampered, signature=sig)
     assert verify_webhook_signature(inp) is False
 
 
 def test_S8_wrong_secret_rejected():
     body = {"timestamp": str(int(time.time() * 1000)), "data": "x"}
     body_bytes, sig = _signed_webhook(body, "wrong_secret")
-    inp = VerifyWebhookInput(payload=body_bytes, signature=sig, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
+    inp = _webhook_input(payload=body_bytes, signature=sig)
     assert verify_webhook_signature(inp) is False
 
 
 def test_S8_malformed_signature_no_throw():
     body = {"timestamp": str(int(time.time() * 1000))}
     body_bytes, _ = _signed_webhook(body)
-    inp = VerifyWebhookInput(
-        payload=body_bytes, signature="not-a-real-sig!!!", secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
-    )
+    inp = _webhook_input(payload=body_bytes, signature="not-a-real-sig!!!")
     assert verify_webhook_signature(inp) is False
 
 
@@ -270,10 +282,8 @@ def test_S9_compare_digest_handles_different_lengths():
     assert verify_response_signature({"a": 1}, "a" * 64, SECRET) is False
     # Webhook: different lengths
     body = json.dumps({"timestamp": "1700000000000"}).encode()
-    inp_short = VerifyWebhookInput(payload=body, signature="ab", secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK)
-    inp_long = VerifyWebhookInput(
-        payload=body, signature="a" * 200, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
-    )
+    inp_short = _webhook_input(payload=body, signature="ab")
+    inp_long = _webhook_input(payload=body, signature="a" * 200)
     assert verify_webhook_signature(inp_short) is False
     assert verify_webhook_signature(inp_long) is False
 
@@ -347,7 +357,6 @@ def test_S11_invalid_signature_rejected():
 
 def test_S11_valid_signature_accepted():
     data = {"foo": "bar"}
-    sig = _sign(data)
 
     def handler(req):
         return httpx.Response(
@@ -477,8 +486,6 @@ def test_S14_timestamp_is_signed():
     # Body2 with fresh timestamp, but reusing sig1 (which was over body1)
     fresh_ms = int(time.time() * 1000)
     body2_bytes = json.dumps({"timestamp": str(fresh_ms), "data": "x"}).encode()
-    inp = VerifyWebhookInput(
-        payload=body2_bytes, signature=sig1, secret=SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
-    )
+    inp = _webhook_input(payload=body2_bytes, signature=sig1)
     # The signature was over body1 (with stale timestamp), not body2
     assert verify_webhook_signature(inp) is False

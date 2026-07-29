@@ -393,13 +393,19 @@ def test_verify_webhook_signature_delegates_to_standalone(captured):
         body = json.dumps({"timestamp": "1700000000000", "data": "x"}).encode()
         sig = hmac.new(API_SECRET.encode(), body, hashlib.sha256).hexdigest()
         inp = VerifyWebhookInput(
-            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
+            payload=body,
+            signature=sig,
+            secret=API_SECRET,
+            tolerance_seconds=DISABLE_FRESHNESS_CHECK,
         )
         # Standalone
         standalone_result = verify_webhook_signature(inp)
         # Via SDK (kwargs form)
         sdk_result = sdk.verify_webhook_signature(
-            payload=body, signature=sig, secret=API_SECRET, tolerance_seconds=DISABLE_FRESHNESS_CHECK
+            payload=body,
+            signature=sig,
+            secret=API_SECRET,
+            tolerance_seconds=DISABLE_FRESHNESS_CHECK,
         )
         assert standalone_result is True
         assert sdk_result == standalone_result

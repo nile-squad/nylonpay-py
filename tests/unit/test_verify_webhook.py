@@ -92,9 +92,7 @@ def test_tolerance_zero_means_strict_not_disabled():
 
 def test_disable_sentinel_is_the_deliberate_opt_out():
     body = {"timestamp": str(int(time.time() * 1000) - 10_000_000), "data": "foo"}
-    result = verify_webhook_signature(
-        _make_input(body, tolerance=DISABLE_FRESHNESS_CHECK)
-    )
+    result = verify_webhook_signature(_make_input(body, tolerance=DISABLE_FRESHNESS_CHECK))
     assert result is True
 
 
@@ -162,9 +160,7 @@ def test_canonical_lowercase_signature_accepted():
     body_bytes = json.dumps(body).encode("utf-8")
     signature = _sign_raw(body_bytes)
     assert signature == signature.lower()
-    inp = VerifyWebhookInput(
-        payload=body_bytes, signature=signature, secret=SECRET
-    )
+    inp = VerifyWebhookInput(payload=body_bytes, signature=signature, secret=SECRET)
     assert verify_webhook_signature(inp) is True
 
 

@@ -67,6 +67,7 @@ from .types import (
 from .verify_webhook import DISABLE_FRESHNESS_CHECK, verify_webhook_signature
 
 __all__ = [
+    "DISABLE_FRESHNESS_CHECK",
     # Types
     "AfterCollectHook",
     "AfterHookInput",
@@ -111,7 +112,6 @@ __all__ = [
     "WebhookEventType",
     "WebhookPayload",
     "WebhookTransactionSnapshot",
-    "DISABLE_FRESHNESS_CHECK",
     "create_nylon_pay",
     "create_sdk_error",
     "parse_error",

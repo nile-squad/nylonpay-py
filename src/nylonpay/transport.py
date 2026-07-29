@@ -54,7 +54,7 @@ T = TypeVar("T")
 
 _CACHED_FINGERPRINT: str = generate_fingerprint()
 
-_MAX_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MiB — reject oversized responses before parsing
+_MAX_RESPONSE_BYTES: int = 10 * 1024 * 1024  # 10 MiB — reject oversized responses before parsing
 
 _KNOWN_CATEGORIES: frozenset[str] = frozenset(
     {

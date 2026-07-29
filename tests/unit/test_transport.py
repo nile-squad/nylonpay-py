@@ -83,9 +83,7 @@ def test_successful_request_with_valid_signature():
     data = {"foo": "bar", "n": 1}
 
     def handler(req):
-        return httpx.Response(
-            200, json={"status": True, "message": "ok", "data": _bind(req, data)}
-        )
+        return httpx.Response(200, json={"status": True, "message": "ok", "data": _bind(req, data)})
 
     t, client, _captured = _build_transport(handler)
     try:
@@ -195,12 +193,9 @@ def test_http_500_maps_to_internal():
 
 def test_envelope_contains_intent_service_action_fingerprint():
     data = {"foo": "bar"}
-    sig = _sign(data)
 
     def handler(req):
-        return httpx.Response(
-            200, json={"status": True, "message": "ok", "data": _bind(req, data)}
-        )
+        return httpx.Response(200, json={"status": True, "message": "ok", "data": _bind(req, data)})
 
     t, client, captured = _build_transport(handler)
     try:
@@ -218,12 +213,9 @@ def test_envelope_contains_intent_service_action_fingerprint():
 
 def test_auth_headers_present():
     data = {"foo": "bar"}
-    sig = _sign(data)
 
     def handler(req):
-        return httpx.Response(
-            200, json={"status": True, "message": "ok", "data": _bind(req, data)}
-        )
+        return httpx.Response(200, json={"status": True, "message": "ok", "data": _bind(req, data)})
 
     t, client, captured = _build_transport(handler)
     try:
@@ -392,9 +384,7 @@ def test_replayed_response_from_an_earlier_request_is_rejected():
         if not captured_blob:
             # First call: a genuine, correctly-bound response — and we keep it.
             captured_blob.update(_bind(req, data))
-        return httpx.Response(
-            200, json={"status": True, "message": "ok", "data": captured_blob}
-        )
+        return httpx.Response(200, json={"status": True, "message": "ok", "data": captured_blob})
 
     t, client, _ = _build_transport(handler)
     try:
