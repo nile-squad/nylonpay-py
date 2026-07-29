@@ -70,4 +70,4 @@ format-check = "ruff format --check ."
 lint-fix = "ruff check --fix . && ruff format ."
 check = ["lint", "format-check", "typecheck", "test"]
 build = "uv build"
-publish = ["check", "build", { cmd = "twine upload dist/*" }]
+publish = ["check", "build", { cmd = "twine upload dist/*.whl dist/*.tar.gz" }]
