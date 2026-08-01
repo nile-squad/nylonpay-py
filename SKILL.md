@@ -8,9 +8,10 @@ description: Use when integrating Nylon Pay into a server-side Python app, colle
 Server-side SDK for Nylon Pay. Python 3.10+. Published as `nylonpay-py`
 (`pip install nylonpay-py`). Import package name: `nylonpay`.
 
-Same product surface as the [TypeScript](https://docs.nylonpay.nilesquad.com/docs/skills/typescript)
-and [PHP](https://docs.nylonpay.nilesquad.com/docs/skills/php) SDKs. Names here are
-snake_case. Hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
+Integration flows (language-agnostic):
+[Nylon Pay integration skill](https://docs.nylonpay.nilesquad.com/docs/skills).
+This file covers Python setup and syntax. Names are snake_case.
+Hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
 
 ## Setup
 
@@ -114,10 +115,11 @@ if not is_valid:
 
 ## Other language SDKs
 
-| Language | Package | Agent skill |
+| Language | Package | SDK skill |
 |---|---|---|
-| TypeScript | [`@nile-squad/nylonpay-ts`](https://github.com/nile-squad/nylonpay-ts) | [docs](https://docs.nylonpay.nilesquad.com/docs/skills/typescript) |
-| PHP | [`nile-squad/nylonpay-php`](https://github.com/nile-squad/nylonpay-php) | [docs](https://docs.nylonpay.nilesquad.com/docs/skills/php) |
+| TypeScript | [`@nile-squad/nylonpay-ts`](https://github.com/nile-squad/nylonpay-ts) | [SKILL.md](https://github.com/nile-squad/nylonpay-ts/blob/main/SKILL.md) |
+| PHP | [`nile-squad/nylonpay-php`](https://github.com/nile-squad/nylonpay-php) | [SKILL.md](https://github.com/nile-squad/nylonpay-php/blob/main/SKILL.md) |
 
-Public hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
+Integration skill: [docs](https://docs.nylonpay.nilesquad.com/docs/skills).
 Example prompts: [docs](https://docs.nylonpay.nilesquad.com/docs/skills/example-prompts).
+Hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
