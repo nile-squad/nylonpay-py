@@ -94,7 +94,7 @@ payment = nylonpay.collect_payment(
     customer={"name": "Jane", "phone_number": "+256700000000"},
     description="Order #1234",
     method="mobileMoney",
-    reference="ORDER-2026-001",
+    reference="550e8400-e29b-41d4-a716-446655440000",
 )
 
 def on_success(data):
@@ -107,7 +107,7 @@ payment.on("success", on_success)
 payment.on("failed", on_failed)
 ```
 
-`reference` is optional and auto-generated if omitted. A supplied reference must be **13 to 15 characters**; the SDK raises `SdkException` with category `validation` otherwise. A raw UUID is 36 characters and will be rejected — use a short id of your own or omit the field.
+`reference` is optional and auto-generated if omitted. A supplied reference must be a valid UUID (any version); the SDK raises `SdkException` with category `validation` otherwise. Omit the field to auto-generate a UUID v4.
 
 ### collect_payment_and_resolve
 
@@ -218,7 +218,7 @@ if tx is not None:
 One-shot status check for a transaction. Does not wait — returns the current server-side state.
 
 ```python
-result = nylonpay.get_status(reference="ORDER-2026-001")
+result = nylonpay.get_status(reference="550e8400-e29b-41d4-a716-446655440000")
 if result.is_ok:
     print(result.value.status)
 ```
@@ -228,7 +228,7 @@ if result.is_ok:
 Look up a full transaction record by `id` or `reference`. At least one must be provided.
 
 ```python
-result = nylonpay.get_transaction(reference="ORDER-2026-001")
+result = nylonpay.get_transaction(reference="550e8400-e29b-41d4-a716-446655440000")
 if result.is_ok:
     print(result.value.failure_reason)
 ```
@@ -355,7 +355,7 @@ Operations that return `Result[T, str]` use the SDK's `Result` type. Check `.is_
 ```python
 from nylonpay import parse_error
 
-result = nylonpay.get_status(reference="ORDER-2026-001")
+result = nylonpay.get_status(reference="550e8400-e29b-41d4-a716-446655440000")
 if result.is_err:
     error = parse_error(result.error)
     if error.retryable:
