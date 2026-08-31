@@ -17,6 +17,22 @@ import time
 from typing import Any
 
 
+def _sort_key(key: str) -> bytes:
+    """Sort key giving JCS ordering: UTF-16 code units.
+
+    WHY big-endian: comparing UTF-16**BE** bytes is equivalent to comparing
+    UTF-16 code units numerically, which is what RFC 8785 requires and what
+    JavaScript's ``<`` operator does. UTF-16**LE** is NOT equivalent: it puts
+    the low byte first, so ``"Ā"`` (U+0100 -> ``00 01``) sorts before ``"Z"``
+    (U+005A -> ``5A 00``) while code-unit order puts ``"Z"`` first. Any sibling
+    key whose low byte is below 0x20 (Cyrillic, CJK, Latin Extended, emoji)
+    diverges under LE, and merchant metadata keys are arbitrary strings, so the
+    backend then rejects a correctly-formed request. Pinned by vector V7 in
+    ``test_signing_conformance.py``.
+    """
+    return key.encode("utf-16-be")
+
+
 def _sort_value(value: Any) -> Any:
     """Recursively sort dict keys by UTF-16 code unit order.
 
@@ -26,10 +42,7 @@ def _sort_value(value: Any) -> Any:
     if isinstance(value, list):
         return [_sort_value(entry) for entry in value]
     if isinstance(value, dict):
-        sorted_items = sorted(
-            value.items(),
-            key=lambda kv: kv[0].encode("utf-16-le"),
-        )
+        sorted_items = sorted(value.items(), key=lambda kv: _sort_key(kv[0]))
         return {k: _sort_value(v) for k, v in sorted_items}
     return value
 

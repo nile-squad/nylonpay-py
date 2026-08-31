@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.1
+
+Upgrading from 0.5.0. **Upgrade if your metadata keys are not plain ASCII.**
+
+### Fixed — critical
+
+- **Requests with non-Latin metadata keys failed authentication.** The canonical
+  payload sorted object keys by UTF-16 **little-endian** bytes, which is not
+  UTF-16 code-unit order: little-endian compares the low byte first, so `"Ā"`
+  (U+0100) sorted before `"Z"` (U+005A) where the correct order is the reverse.
+  Any sibling key set containing a character whose low byte is below `0x20` —
+  Cyrillic, CJK, Latin Extended, emoji — was canonicalized differently from the
+  server, so a correctly-formed request was rejected as an authentication
+  failure. Sorting is now by UTF-16 **big-endian** bytes, which is equivalent to
+  code-unit order.
+
+  Pure-ASCII payloads were never affected, so most integrations saw nothing. If
+  you passed metadata keys such as `{"Ярлык": ...}` or `{"一括": ...}` alongside
+  another key, those calls failed and now succeed.
+
+### Added
+
+- The spec's canonical signing conformance vectors V1–V7 now ship as a unit test
+  (spec requirement S19). They are generated from the reference implementation
+  and verified against the backend's verifier, so this SDK is now pinned to the
+  backend rather than only to itself. V7 covers the ordering bug above.
+
 ## 0.5.0
 
 Upgrading from 0.4.0, the previously published release.
