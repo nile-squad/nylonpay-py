@@ -1,9 +1,9 @@
-"""Signing conformance — the spec's canonical vectors V1-V7 (requirement S19).
+"""Signing conformance, the spec's canonical vectors V1-V7 (requirement S19).
 
 These are NOT self-generated. They are the conformance vectors published in
 the Nylon Pay SDK Spec (transport.md, "Conformance vectors"), generated from
-the reference implementation and verified against the backend's own
-``verifySignature``. Reproducing them proves this SDK agrees with the backend,
+the reference implementation and verified against the backend's verifier.
+Reproducing them proves this SDK agrees with the backend,
 not merely with itself.
 
 Each vector isolates one failure mode that is otherwise diagnosed only as an

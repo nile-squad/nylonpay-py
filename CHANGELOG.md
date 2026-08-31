@@ -4,14 +4,13 @@
 
 Upgrading from 0.5.0. **Upgrade if your metadata keys are not plain ASCII.**
 
-### Fixed — critical
+### Fixed, critical
 
 - **Requests with non-Latin metadata keys failed authentication.** The canonical
   payload sorted object keys by UTF-16 **little-endian** bytes, which is not
   UTF-16 code-unit order: little-endian compares the low byte first, so `"Ā"`
   (U+0100) sorted before `"Z"` (U+005A) where the correct order is the reverse.
-  Any sibling key set containing a character whose low byte is below `0x20` —
-  Cyrillic, CJK, Latin Extended, emoji — was canonicalized differently from the
+  Any sibling key set containing a character whose low byte is below `0x20`, Cyrillic, CJK, Latin Extended, emoji, was canonicalized differently from the
   server, so a correctly-formed request was rejected as an authentication
   failure. Sorting is now by UTF-16 **big-endian** bytes, which is equivalent to
   code-unit order.
@@ -31,13 +30,13 @@ Upgrading from 0.5.0. **Upgrade if your metadata keys are not plain ASCII.**
 
 Upgrading from 0.4.0, the previously published release.
 
-### Fixed — critical
+### Fixed, critical
 
 - **Webhook verification failed for every genuine webhook on Python 3.10.**
   Nylon Pay stamps deliveries with an ISO 8601 timestamp ending in `Z`.
   `datetime.fromisoformat` only accepts that suffix from Python 3.11 onward, so
   on 3.10 the freshness check could not read the timestamp and fell through to
-  its fail-closed branch — `verify_webhook_signature` returned `False` for
+  its fail-closed branch, `verify_webhook_signature` returned `False` for
   authentic webhooks. If you are on Python 3.10 and worked around this with
   `tolerance_seconds=0`, you can now remove that workaround and get replay
   protection back.
@@ -51,7 +50,7 @@ Upgrading from 0.4.0, the previously published release.
   same reference. **Requires a backend that echoes the nonce; it is deployed
   first.**
 - **`tolerance_seconds=0` no longer disables webhook replay protection.** It now
-  means a tolerance of zero seconds — maximum strictness. Reaching for `0` to
+  means a tolerance of zero seconds, maximum strictness. Reaching for `0` to
   mean "strictest" previously turned the freshness check off entirely, silently.
   Pass `DISABLE_FRESHNESS_CHECK` to opt out deliberately.
 - **The response body size cap is enforced while reading.** The transport now
@@ -60,7 +59,7 @@ Upgrading from 0.4.0, the previously published release.
   bounded peak memory and did nothing at all for a chunked response.
 - **`reference` validation now uses whole-string matching.** Python's `$` also
   matches before a trailing newline, so `"<uuid>\n"` was accepted here while the
-  TypeScript SDK rejected it — the reference is a cross-language contract and an
+  TypeScript SDK rejected it, the reference is a cross-language contract and an
   idempotency key.
 
 ### Breaking
@@ -69,7 +68,7 @@ Upgrading from 0.4.0, the previously published release.
   The backend has always required it under that name; the SDK dataclass and the
   spec both said `amount`, so `create_invoice` with line items failed
   validation for every merchant who followed the documented shape. Rename the
-  field in your item objects — the value is unchanged (price per unit, smallest
+  field in your item objects, the value is unchanged (price per unit, smallest
   currency unit).
 - **`tolerance_seconds=0` flips meaning** (see Security above).
 - **`WebhookTransactionSnapshot` field types now match what the backend

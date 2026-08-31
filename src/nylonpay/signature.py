@@ -4,7 +4,7 @@ WHY canonical serialization matters: the backend independently computes
 the same HMAC over the request body. Any key-ordering difference between
 Python's ``json.dumps`` and JavaScript's ``JSON.stringify`` would
 produce mismatched signatures and reject every request. RFC 8785 (JCS)
-mandates sorting by UTF-16 code unit order — matching JavaScript's
+mandates sorting by UTF-16 code unit order, matching JavaScript's
 ``<`` operator on strings.
 """
 
@@ -51,7 +51,7 @@ def create_canonical_payload(payload: Any) -> str:
     """Serialize ``payload`` to a deterministic JSON string.
 
     Keys are sorted by UTF-16 code unit order (RFC 8785 JCS) so the
-    output is byte-identical to the backend's verification — both
+    output is byte-identical to the backend's verification, both
     sides must produce the same JSON string or the HMAC won't match.
     """
     return json.dumps(_sort_value(payload), separators=(",", ":"), ensure_ascii=False)
@@ -61,7 +61,7 @@ def create_signature_payload(input: dict[str, Any]) -> str:
     """Build the dot-separated string that gets HMAC-signed.
 
     Binds fingerprint, nonce, timestamp, and canonical payload into a
-    single string so the signature covers all four — preventing any
+    single string so the signature covers all four, preventing any
     one field from being swapped without invalidating the signature.
     """
     fingerprint: str = input["fingerprint"]
