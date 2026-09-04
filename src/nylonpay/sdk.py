@@ -130,6 +130,12 @@ def _validate_phone_format(normalized_phone: str, field_name: str) -> None:
         _throw_validation(f"{field_name} must be a valid phone number")
 
 
+def _validate_test_outcome(test_outcome: Any) -> None:
+    """Validate the sandbox-only forced outcome (runtime check for plain-dict callers)."""
+    if test_outcome is not None and test_outcome not in ("success", "fail"):
+        _throw_validation('test_outcome must be "success" or "fail"')
+
+
 def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
     """Full validate + normalize + resolve reference for a collection.
 
@@ -138,6 +144,7 @@ def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
     """
     reference = _resolve_reference(input.reference)
     _validate_collection_amount(input.amount)
+    _validate_test_outcome(input.test_outcome)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
     normalized_phone = normalize_phone(input.customer.phone_number)
@@ -157,6 +164,7 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     """
     reference = _resolve_reference(input.reference)
     _validate_payout_amount(input.amount)
+    _validate_test_outcome(input.test_outcome)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
     normalized_phone = normalize_phone(input.customer.phone_number)

@@ -432,3 +432,58 @@ def test_reference_with_trailing_newline_is_rejected():
             assert exc.category == "validation"
         else:
             raise AssertionError(f"accepted malformed reference: {bad!r}")
+
+
+# test_outcome (sandbox forced outcome) ----------------------------------------
+
+
+def _payout_input(**overrides) -> dict[str, Any]:
+    base: dict[str, Any] = {
+        "amount": 5000,
+        "currency": "UGX",
+        "customer": {"name": "Alice", "phone_number": "+256700000000"},
+        "destination": {"account_holder_name": "Alice", "account_number": "123456"},
+        "description": "Payout #1",
+    }
+    base.update(overrides)
+    return base
+
+
+def test_collect_payment_forwards_test_outcome_on_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.collect_payment(**_collect_input(test_outcome="fail"))
+        assert cap["body"]["payload"]["testOutcome"] == "fail"
+    finally:
+        client.close()
+
+
+def test_make_payout_forwards_test_outcome_on_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.make_payout(**_payout_input(test_outcome="success"))
+        assert cap["body"]["payload"]["testOutcome"] == "success"
+    finally:
+        client.close()
+
+
+def test_omitted_test_outcome_is_absent_from_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.collect_payment(**_collect_input())
+        assert "testOutcome" not in cap["body"]["payload"]
+    finally:
+        client.close()
+
+
+def test_invalid_test_outcome_throws_before_network(captured):
+    sdk, client, _ = _make_sdk(_default_handler)
+    try:
+        with pytest.raises(SdkException) as exc:
+            sdk.collect_payment(**_collect_input(test_outcome="sometimes"))
+        assert exc.value.category == "validation"
+        with pytest.raises(SdkException) as exc2:
+            sdk.make_payout(**_payout_input(test_outcome="sometimes"))
+        assert exc2.value.category == "validation"
+    finally:
+        client.close()

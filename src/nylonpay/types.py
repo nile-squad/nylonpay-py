@@ -149,6 +149,11 @@ class CollectPaymentInput:
     bank: BankDetails | None = None
     tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
+    #: Sandbox-only forced outcome. ``"success"`` always succeeds, ``"fail"``
+    #: always fails; ``None`` (default) keeps the random sandbox behavior.
+    #: Rejected with a validation error when used with a live key.
+    #: Serialized to the wire as ``testOutcome``.
+    test_outcome: Literal["success", "fail"] | None = None
 
 
 @dataclass(frozen=True)
@@ -167,6 +172,11 @@ class MakePayoutInput:
     reference: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, str] = field(default_factory=dict)
+    #: Sandbox-only forced outcome. ``"success"`` always succeeds, ``"fail"``
+    #: always fails; ``None`` (default) keeps the random sandbox behavior.
+    #: Rejected with a validation error when used with a live key.
+    #: Serialized to the wire as ``testOutcome``.
+    test_outcome: Literal["success", "fail"] | None = None
 
 
 @dataclass(frozen=True)
