@@ -1,15 +1,25 @@
-"""Stable server fingerprint based on the runtime environment.
+"""Stable server fingerprint based on OS metadata.
 
-WHY fingerprinting: the backend binds each signed request to the
-originating server so that a leaked signature cannot be replayed from
-a different machine. The fingerprint must be stable within a process
-but differ across hosts, OS versions, and Python runtimes.
+WHAT IT IS: an opaque, stable identifier for the machine this process runs
+on. It is sent as ``_fingerprint`` in the request body and is the first
+component of ``signatureInput``, so the value signed and the value sent
+must be identical.
 
-The components (OS type, platform, arch, release, hostname, runtime
-versions) are derived from Python's ``platform`` and ``sys`` stdlib
-modules. The same conceptual inputs are used across all SDK
-implementations so a merchant running both TS and Python SDKs on the
-same server produces comparable fingerprints.
+WHAT IT IS NOT: it does not bind a signature to a machine. The server
+reads ``_fingerprint`` out of the body and feeds that value into its own
+HMAC; it never computes one of its own and has no way to. A replayed
+request carries the same fingerprint it was signed with, so replay is
+prevented by the nonce and timestamp, not by this value.
+
+Because the server treats it as opaque, what goes into the hash is an
+implementation choice. It can change without breaking older clients, which
+sign with whatever they sent, and the SDKs do not need to agree with each
+other on the inputs.
+
+Only OS-level inputs are used. Python version and implementation were
+removed on 2026-09-08: a runtime version is not something every SDK can
+obtain the same way, and it made the value churn on every upgrade for no
+benefit.
 """
 
 from __future__ import annotations
@@ -22,7 +32,7 @@ from functools import lru_cache
 
 @lru_cache(maxsize=1)
 def generate_fingerprint() -> str:
-    """Derive a SHA-256 hex digest from OS and runtime metadata.
+    """Derive a SHA-256 hex digest from OS metadata.
 
     Cached after first call — the environment cannot change within a
     running process, so recomputing is wasteful.
@@ -34,8 +44,6 @@ def generate_fingerprint() -> str:
             f"arch:{platform.machine()}",
             f"release:{platform.release()}",
             f"hostname:{socket.gethostname()}",
-            f"python:{platform.python_version()}",
-            f"implementation:{platform.python_implementation()}",
         ]
     )
     return hashlib.sha256(components.encode()).hexdigest()
