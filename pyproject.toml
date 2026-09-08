@@ -41,7 +41,11 @@ dev = [
     "ruff>=0.11",
     "pytest>=8.0",
     "poethepoet>=0.32",
-    "twine>=6.0",
+    # 7.0 or newer: twine monkeypatches packaging's valid-metadata list to add
+    # Metadata 2.0 support, and 6.x hardcodes it up to 2.4. hatchling now emits
+    # Metadata 2.5, so every freshly built artifact was rejected by its own
+    # publish step with "'2.5' is not a valid metadata version".
+    "twine>=7.0",
 ]
 
 [tool.ruff]
@@ -79,4 +83,7 @@ format-check = "ruff format --check ."
 lint-fix = "ruff check --fix . && ruff format ."
 check = ["lint", "format-check", "typecheck", "test"]
 build = "uv build"
-publish = ["check", "build", { cmd = "twine upload dist/*.whl dist/*.tar.gz" }]
+# --skip-existing because `uv build` adds to dist/ rather than replacing it, so
+# the glob picks up every previously built version too and the upload dies on
+# the first one PyPI already has.
+publish = ["check", "build", { cmd = "twine upload --skip-existing dist/*.whl dist/*.tar.gz" }]
