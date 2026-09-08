@@ -52,6 +52,15 @@ src = ["src", "tests"]
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# The signing conformance vectors are exact byte sequences, shared verbatim with
+# the TypeScript and PHP SDKs and with the backend, and their expected
+# signatures are pinned against them. Wrapping or reformatting a payload string
+# would change what gets signed and silently invalidate the vector, so the line
+# length rule cannot apply to this file. `ruff format` already leaves them alone
+# for the same reason; only the lint rule needed telling.
+"tests/unit/test_signing_conformance.py" = ["E501"]
+
 [tool.ruff.format]
 quote-style = "double"
 
