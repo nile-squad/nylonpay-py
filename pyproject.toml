@@ -82,8 +82,13 @@ lint = "ruff check ."
 format-check = "ruff format --check ."
 lint-fix = "ruff check --fix . && ruff format ."
 check = ["lint", "format-check", "typecheck", "test"]
-build = "uv build"
-# --skip-existing because `uv build` adds to dist/ rather than replacing it, so
-# the glob picks up every previously built version too and the upload dies on
-# the first one PyPI already has.
-publish = ["check", "build", { cmd = "twine upload --skip-existing dist/*.whl dist/*.tar.gz" }]
+# `uv build` adds to dist/ rather than replacing it, so without this the
+# directory accumulates every version ever built and the publish glob picks up
+# all of them. dist/ is regenerable output and is self-ignoring (uv writes a
+# dist/.gitignore containing `*`), so clearing it costs nothing.
+clean = "rm -rf dist"
+build = ["clean", { cmd = "uv build" }]
+# No --skip-existing: `build` now clears dist/ first, so the glob only ever
+# carries the current version. If PyPI rejects it as already published, that is
+# a forgotten version bump and should fail loudly rather than be skipped.
+publish = ["check", "build", { cmd = "twine upload dist/*.whl dist/*.tar.gz" }]
