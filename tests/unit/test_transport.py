@@ -228,6 +228,10 @@ def test_auth_headers_present():
         assert "x-nylon-signature" in h
         assert len(h["x-nylon-signature"]) == 64
         assert h["content-type"] == "application/json"
+        # Opts this client into wire additions the backend withholds from
+        # releases that cannot parse them. Without it the server keeps sending
+        # the older message shape.
+        assert h["x-nylon-features"] == "error-code"
     finally:
         client.close()
 

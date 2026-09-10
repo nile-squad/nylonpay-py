@@ -386,6 +386,18 @@ def _build_envelope(action: str, payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+CLIENT_FEATURES: tuple[str, ...] = ("error-code",)
+"""Wire features this SDK understands, sent on every request.
+
+``error-code`` says :func:`parse_error` can read the optional
+``-- error-code: <code>`` tail. Every release before this one parsed the
+category with a regex anchored at the end of the message, so a code appended
+after it left them with no match — category silently downgraded to ``internal``,
+and the raw suffixes shown to the user as part of the message. The backend only
+appends a code for clients listed here.
+"""
+
+
 def _build_auth_headers(
     api_key: str,
     api_secret: str,
@@ -411,6 +423,12 @@ def _build_auth_headers(
 
     return {
         "content-type": "application/json",
+        # Declares what this client can parse. The backend withholds anything
+        # not listed here, so a version that predates a wire addition keeps
+        # receiving the shape it was written against. Not covered by the
+        # signature (fingerprint + nonce + timestamp + payload), so it is free
+        # to change.
+        "x-nylon-features": ",".join(CLIENT_FEATURES),
         "x-nylon-key": api_key,
         "x-nylon-nonce": nonce,
         "x-nylon-signature": signature,
