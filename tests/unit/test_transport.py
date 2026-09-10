@@ -248,6 +248,15 @@ def test_parse_error_raw_message_with_suffix():
     assert err.message == "something failed"
 
 
+def test_parse_error_raw_message_with_optional_code():
+    err = parse_error(
+        "The payout could not start -- error-type: account -- error-code: payout_gate"
+    )
+    assert err.category == "account"
+    assert err.code == "payout_gate"
+    assert err.message == "The payout could not start"
+
+
 def test_parse_error_unknown_falls_back_to_internal():
     err = parse_error("plain message")
     assert err.category == "internal"

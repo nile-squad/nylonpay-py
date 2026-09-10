@@ -75,7 +75,7 @@ _KNOWN_CATEGORIES: frozenset[str] = frozenset(
 _STATUS_CATEGORY: dict[int, SdkErrorCategory] = {408: "timeout", 429: "rate_limit"}
 
 _ERROR_TYPE_SUFFIX = re.compile(
-    r"^(.*?)\s*--\s*error-type:\s*([a-z_]+)\s*$",
+    r"^(.*?)\s*--\s*error-type:\s*([a-z_]+)(?:\s*--\s*error-code:\s*([a-z0-9_]+))?\s*$",
     re.DOTALL | re.IGNORECASE,
 )
 
@@ -139,13 +139,15 @@ def parse_error(error: str) -> SdkError:
                 category=parsed["category"],
                 message=parsed["message"],
                 retryable=parsed.get("retryable"),
+                code=parsed.get("code") if isinstance(parsed.get("code"), str) else None,
             )
 
     # Raw server message: pull the ` -- error-type: <category>` suffix if present
-    category, clean_message = _parse_category_from_message(error)
+    category, clean_message, code = _parse_category_from_message(error)
     return SdkError(
         category=category if category is not None else "internal",
         message=clean_message,
+        code=code,
     )
 
 
@@ -452,22 +454,22 @@ def _strip_response_signature(data: Any) -> tuple[Any, str | None]:
 
 def _parse_category_from_message(
     message: str,
-) -> tuple[SdkErrorCategory | None, str]:
+) -> tuple[SdkErrorCategory | None, str, str | None]:
     """Split the server's tagged category off an error message.
 
     The backend appends `` -- error-type: <category>`` to every SDK error.
-    Returns ``(category, clean_message)`` where category is ``None`` if no
+    Returns ``(category, clean_message, code)`` where category is ``None`` if no
     recognized suffix is found.
     """
     match = _ERROR_TYPE_SUFFIX.match(message)
     if match and match.group(2) in _KNOWN_CATEGORIES:
-        return match.group(2), match.group(1)  # ty: ignore[invalid-return-type]
-    return None, message
+        return match.group(2), match.group(1), match.group(3)  # ty: ignore[invalid-return-type]
+    return None, message, None
 
 
 def _build_http_error(message: str, status_code: int) -> SdkError:
     """Build a structured SdkError from an HTTP error body's message + status."""
-    category, clean_message = _parse_category_from_message(message)
+    category, clean_message, code = _parse_category_from_message(message)
 
     if category is None:
         category = _STATUS_CATEGORY.get(status_code)
@@ -478,6 +480,7 @@ def _build_http_error(message: str, status_code: int) -> SdkError:
         category=category,
         message=clean_message,
         retryable=status_code in RETRYABLE_STATUS_CODES,
+        code=code,
     )
 
 

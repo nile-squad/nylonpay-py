@@ -66,6 +66,30 @@ WebhookEventType = Literal[
 
 Currency = Literal["USD", "EUR", "GBP", "KES", "UGX", "TZS", "RWF"]
 
+FailureCategory = Literal["provider", "customer", "internal", "validation"]
+
+FailureCode = Literal[
+    "provider_rejection",
+    "customer_timeout",
+    "insufficient_balance",
+    "invalid_number",
+    "internal_error",
+    "limit_exceeded",
+    "cancelled",
+]
+
+SandboxTestOutcome = Literal[
+    "success",
+    "fail",
+    "provider_rejection",
+    "customer_timeout",
+    "insufficient_balance",
+    "invalid_number",
+    "internal_error",
+    "limit_exceeded",
+    "cancelled",
+]
+
 SdkErrorCategory = Literal[
     "auth",
     "validation",
@@ -153,7 +177,7 @@ class CollectPaymentInput:
     #: always fails; ``None`` (default) keeps the random sandbox behavior.
     #: Rejected with a validation error when used with a live key.
     #: Serialized to the wire as ``testOutcome``.
-    test_outcome: Literal["success", "fail"] | None = None
+    test_outcome: SandboxTestOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -176,7 +200,7 @@ class MakePayoutInput:
     #: always fails; ``None`` (default) keeps the random sandbox behavior.
     #: Rejected with a validation error when used with a live key.
     #: Serialized to the wire as ``testOutcome``.
-    test_outcome: Literal["success", "fail"] | None = None
+    test_outcome: SandboxTestOutcome | None = None
 
 
 @dataclass(frozen=True)
@@ -326,6 +350,8 @@ class Transaction:
     updated_at: str
     duplicate: bool | None = None
     operator_tid: str | None = None
+    failure_category: FailureCategory | None = None
+    failure_code: FailureCode | None = None
     status_text: str | None = None
     delayed: bool | None = None
 
@@ -342,6 +368,11 @@ class StatusResponse:
     amount: int
     currency: Currency
     updated_at: str
+    id: str | None = None
+    operator_tid: str | None = None
+    failure_reason: str | None = None
+    failure_category: FailureCategory | None = None
+    failure_code: FailureCode | None = None
     status_text: str | None = None
     delayed: bool | None = None
 
@@ -364,11 +395,12 @@ class InvoiceResponse:
     """Response from creating an invoice."""
 
     id: str
-    invoice_number: str
+    invoice_number: str | None
     payment_link: str
     amount: str
     currency: str
     status: str
+    url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -398,6 +430,9 @@ class WebhookTransactionSnapshot:
     mode: TransactionMode | None
     failureReason: str | None
     operatorTid: str | None
+    failureCategory: FailureCategory | None = None
+    failureCode: FailureCode | None = None
+    legacyType: Literal["charge"] | None = None
 
 
 @dataclass(frozen=True)
@@ -429,6 +464,7 @@ class SdkError:
     category: SdkErrorCategory
     message: str
     retryable: bool | None = None
+    code: str | None = None
 
 
 # --- Event types ---
