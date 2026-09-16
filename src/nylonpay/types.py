@@ -64,7 +64,7 @@ WebhookEventType = Literal[
     "transaction.cancelled",
 ]
 
-Currency = Literal["USD", "EUR", "GBP", "KES", "UGX", "TZS", "RWF"]
+Currency = Literal["USD", "EUR", "GBP", "KES", "UGX", "TZS", "RWF", "CDF"]
 
 FailureCategory = Literal["provider", "customer", "internal", "validation"]
 

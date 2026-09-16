@@ -38,7 +38,7 @@ nylonpay = create_nylon_pay(
   at random, which makes a test that expects one outcome flaky. Any other value
   raises a `validation` error, and so does using it with a live key.
 - Amounts are integers in the currency's smallest tracked unit (for example `10000`).
-- Supported currencies: `USD`, `EUR`, `GBP`, `KES`, `UGX`, `TZS`, `RWF`.
+- Supported currencies: `USD`, `EUR`, `GBP`, `KES`, `UGX`, `TZS`, `RWF`, `CDF`.
 - Nested inputs (`customer`, `destination`, `items`) accept plain dicts.
 
 ## Result type, read before writing any call
