@@ -19,6 +19,10 @@ def test_normalize_prepends_256_for_local_zero_prefix():
     assert normalize_phone("0700000000") == "256700000000"
 
 
+def test_normalize_kenya_local_uses_254():
+    assert normalize_phone("0710000000", "KES") == "254710000000"
+
+
 def test_normalize_already_normalized_passes_through():
     assert normalize_phone("256700000000") == "256700000000"
 

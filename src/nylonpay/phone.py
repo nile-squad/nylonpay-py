@@ -12,20 +12,28 @@ from __future__ import annotations
 
 import re
 
+_DIAL_BY_CURRENCY = {
+    "CDF": "243",
+    "KES": "254",
+    "RWF": "250",
+    "TZS": "255",
+    "UGX": "256",
+}
 
-def normalize_phone(phone: str) -> str:
+
+def normalize_phone(phone: str, currency: str = "UGX") -> str:
     """Transform a phone string into the provider's canonical digit-only form.
 
-    Strips whitespace and leading ``+``. If the result is a 10-digit
-    number starting with ``0`` (local Ugandan format), prepends the
-    ``256`` country code and drops the trunk prefix. Pure function —
-    transforms but never rejects; pair with ``is_valid_phone_format``
-    for validation.
+    Strips whitespace and leading ``+``. A 10-digit number starting with
+    ``0`` takes that currency's dial code (Uganda 256 unless currency is
+    KES, TZS, RWF or CDF). Pure function — transforms but never rejects;
+    pair with ``is_valid_phone_format`` for validation.
     """
     normalized = re.sub(r"\s+", "", phone)
     normalized = re.sub(r"^\+", "", normalized)
     if normalized.startswith("0") and len(normalized) == 10:
-        normalized = f"256{normalized[1:]}"
+        dial = _DIAL_BY_CURRENCY.get(currency.upper(), "256")
+        normalized = f"{dial}{normalized[1:]}"
     return normalized
 
 

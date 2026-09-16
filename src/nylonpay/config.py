@@ -48,3 +48,8 @@ RETRYABLE_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 MIN_COLLECTION_AMOUNT = 500
 MIN_DISBURSEMENT_AMOUNT = 5000
+NO_NYLON_FLOOR_CURRENCIES = frozenset({"CDF", "KES", "RWF", "TZS"})
+
+
+def has_no_nylon_floor(currency: str) -> bool:
+    return currency.upper() in NO_NYLON_FLOOR_CURRENCIES

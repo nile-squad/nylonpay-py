@@ -36,6 +36,7 @@ from .config import (
     MIN_COLLECTION_AMOUNT,
     MIN_DISBURSEMENT_AMOUNT,
     SDK_ACTIONS,
+    has_no_nylon_floor,
 )
 from .payment import create_payment_instance
 from .phone import is_valid_phone_format, normalize_phone
@@ -102,19 +103,19 @@ def _resolve_reference(reference: str | None) -> str:
     return reference
 
 
-def _validate_collection_amount(amount: int) -> None:
-    """Positive integer >= MIN_COLLECTION_AMOUNT."""
+def _validate_collection_amount(amount: int, currency: str = "UGX") -> None:
+    """Positive integer. Uganda keeps the published 500 floor."""
     if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0:
         _throw_validation("amount must be a positive integer")
-    if amount < MIN_COLLECTION_AMOUNT:
+    if not has_no_nylon_floor(currency) and amount < MIN_COLLECTION_AMOUNT:
         _throw_validation(f"Collection amount must be at least {MIN_COLLECTION_AMOUNT} UGX")
 
 
-def _validate_payout_amount(amount: int) -> None:
-    """Positive integer >= MIN_DISBURSEMENT_AMOUNT."""
+def _validate_payout_amount(amount: int, currency: str = "UGX") -> None:
+    """Positive integer. Uganda keeps the published 5000 floor."""
     if not isinstance(amount, int) or isinstance(amount, bool) or amount <= 0:
         _throw_validation("amount must be a positive integer")
-    if amount < MIN_DISBURSEMENT_AMOUNT:
+    if not has_no_nylon_floor(currency) and amount < MIN_DISBURSEMENT_AMOUNT:
         _throw_validation(f"Payout amount must be at least {MIN_DISBURSEMENT_AMOUNT} UGX")
 
 
@@ -143,11 +144,11 @@ def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
     can never bypass validation (spec invariant #12).
     """
     reference = _resolve_reference(input.reference)
-    _validate_collection_amount(input.amount)
+    _validate_collection_amount(input.amount, input.currency)
     _validate_test_outcome(input.test_outcome)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
-    normalized_phone = normalize_phone(input.customer.phone_number)
+    normalized_phone = normalize_phone(input.customer.phone_number, input.currency)
     _validate_phone_format(normalized_phone, "customer.phone_number")
     _validate_non_empty(input.description, "description")
     if input.method == "bank" and not input.bank:
@@ -163,11 +164,11 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     Sibling of :func:`_prepare_collect_payload` — same invariant #12 guarantee.
     """
     reference = _resolve_reference(input.reference)
-    _validate_payout_amount(input.amount)
+    _validate_payout_amount(input.amount, input.currency)
     _validate_test_outcome(input.test_outcome)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
-    normalized_phone = normalize_phone(input.customer.phone_number)
+    normalized_phone = normalize_phone(input.customer.phone_number, input.currency)
     _validate_phone_format(normalized_phone, "customer.phone_number")
     _validate_non_empty(input.description, "description")
     _validate_non_empty(input.destination.account_holder_name, "destination.account_holder_name")
@@ -516,7 +517,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
     ) -> Result[InvoiceResponse, str]:
         """Generate an invoice and send it to the customer by email."""
         input = coerce_dataclass(CreateInvoiceInput, kwargs)
-        _validate_collection_amount(input.amount)
+        _validate_collection_amount(input.amount, input.currency)
         _validate_non_empty(input.customer_email, "customer_email")
 
         if input.items is not None:
