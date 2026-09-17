@@ -204,6 +204,37 @@ class MakePayoutInput:
 
 
 @dataclass(frozen=True)
+class PayBillInput:
+    """Input for paying a Uganda bill."""
+
+    amount: int
+    meter_number: str
+    phone: str
+    utility_code: Literal["LIGHT", "NWSC", "DSTV", "GOTV"]
+    area: str | None = None
+    bouquet_code: str | None = None
+
+
+@dataclass(frozen=True)
+class BuyAirtimeInput:
+    """Input for buying Uganda airtime or a data bundle."""
+
+    phone: str
+    purchase_type: Literal["airtime", "bundle"]
+    amount: int | None = None
+    bundle_id: str | None = None
+
+
+@dataclass(frozen=True)
+class UtilityPaymentResponse:
+    """Result of a bill or airtime purchase."""
+
+    reference: str
+    status: TransactionStatus
+    transaction_id: str
+
+
+@dataclass(frozen=True)
 class GetStatusInput:
     """Input for a one-shot status check.
 
@@ -678,6 +709,14 @@ class NylonPaySdk(Protocol):
         """Initiate a disbursement and block until terminal state. Single
         request/response call.
         """
+        ...
+
+    def pay_bill(self, **kwargs: Any) -> Result[UtilityPaymentResponse, str]:
+        """Pay a Uganda bill from the merchant wallet."""
+        ...
+
+    def buy_airtime(self, **kwargs: Any) -> Result[UtilityPaymentResponse, str]:
+        """Buy Uganda airtime or a data bundle from the merchant wallet."""
         ...
 
     def get_status(self, **kwargs: Any) -> Result[StatusResponse, str]:

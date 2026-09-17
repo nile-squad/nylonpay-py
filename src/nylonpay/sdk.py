@@ -58,6 +58,9 @@ from .types import (
     NylonPaySdk,
     PaymentInstance,
     PhoneVerification,
+    PayBillInput,
+    BuyAirtimeInput,
+    UtilityPaymentResponse,
     SdkError,
     SdkHooks,
     StatusResponse,
@@ -173,9 +176,13 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     _validate_non_empty(input.description, "description")
     _validate_non_empty(input.destination.account_holder_name, "destination.account_holder_name")
     _validate_non_empty(input.destination.account_number, "destination.account_number")
+    _validate_non_empty(input.destination.phone, "destination.phone")
+    destination_phone = normalize_phone(input.destination.phone, input.currency)
+    _validate_phone_format(destination_phone, "destination.phone")
 
-    normalized_customer = dataclasses.replace(input.customer, phone_number=normalized_phone)
-    return dataclasses.replace(input, reference=reference, customer=normalized_customer)
+    normalized_customer = dataclasses.replace(input.customer, phone_number=destination_phone)
+    normalized_destination = dataclasses.replace(input.destination, phone=destination_phone)
+    return dataclasses.replace(input, reference=reference, customer=normalized_customer, destination=normalized_destination)
 
 
 def _apply_before_hook_mutation(mutated: Any, current: Any, prepare_fn: Any) -> Any:
@@ -414,6 +421,48 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         return Err(result.error)
 
     # ------------------------------------------------------------------
+    # pay_bill / buy_airtime
+    # ------------------------------------------------------------------
+
+    def pay_bill(**kwargs: Any) -> Result[UtilityPaymentResponse, str]:
+        """Pay a Uganda bill from the merchant wallet."""
+        input = coerce_dataclass(PayBillInput, kwargs)
+        _validate_non_empty(input.meter_number, "meter_number")
+        _validate_non_empty(input.phone, "phone")
+        if input.amount <= 0:
+            _throw_validation("amount must be a positive integer")
+        phone = normalize_phone(input.phone, "UGX")
+        _validate_phone_format(phone, "phone")
+
+        payload = dataclasses.replace(input, phone=phone)
+        result = transport["send"](
+            {"action": SDK_ACTIONS["pay_bill"], "payload": to_wire(payload)}
+        )
+        if result.is_ok:
+            return Ok(from_wire(UtilityPaymentResponse, result.value))
+        return Err(result.error)
+
+    def buy_airtime(**kwargs: Any) -> Result[UtilityPaymentResponse, str]:
+        """Buy Uganda airtime or a data bundle from the merchant wallet."""
+        input = coerce_dataclass(BuyAirtimeInput, kwargs)
+        _validate_non_empty(input.phone, "phone")
+        if input.purchase_type == "airtime":
+            if input.amount is None or input.amount <= 0:
+                _throw_validation("amount must be a positive integer")
+        elif not input.bundle_id or not input.bundle_id.strip():
+            _throw_validation("bundle_id is required")
+        phone = normalize_phone(input.phone, "UGX")
+        _validate_phone_format(phone, "phone")
+
+        payload = dataclasses.replace(input, phone=phone)
+        result = transport["send"](
+            {"action": SDK_ACTIONS["buy_airtime"], "payload": to_wire(payload)}
+        )
+        if result.is_ok:
+            return Ok(from_wire(UtilityPaymentResponse, result.value))
+        return Err(result.error)
+
+    # ------------------------------------------------------------------
     # 5. get_status
     # ------------------------------------------------------------------
 
@@ -565,6 +614,8 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             collect_payment_and_resolve=collect_payment_and_resolve,
             make_payout=make_payout,
             make_payout_and_resolve=make_payout_and_resolve,
+            pay_bill=pay_bill,
+            buy_airtime=buy_airtime,
             get_status=get_status,
             get_transaction=get_transaction,
             list_transactions=list_transactions,

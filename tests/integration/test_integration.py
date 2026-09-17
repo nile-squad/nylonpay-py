@@ -122,6 +122,7 @@ def test_I4_payout_happy_path() -> None:
         destination={
             "account_holder_name": "Test Customer",
             "account_number": "123456",
+            "phone": TEST_PHONE,
         },
         description="I4 test payout",
         reference=_unique_reference(),
@@ -143,6 +144,7 @@ def test_I5_get_transaction_after_payout() -> None:
         destination={
             "account_holder_name": "Test Customer",
             "account_number": "123456",
+            "phone": TEST_PHONE,
         },
         description="I5 test payout",
         reference=ref,
@@ -164,6 +166,7 @@ def test_I6_idempotency_on_payout() -> None:
         "destination": {
             "account_holder_name": "Test Customer",
             "account_number": "123456",
+            "phone": TEST_PHONE,
         },
         "description": "I6 idempotency test",
         "reference": ref,
@@ -253,6 +256,7 @@ def test_I14b_sub_minimum_payout_amount() -> None:
             destination={
                 "account_holder_name": "Test",
                 "account_number": "123456",
+            "phone": TEST_PHONE,
             },
             description="I14b sub-min test",
             reference=_unique_reference(),

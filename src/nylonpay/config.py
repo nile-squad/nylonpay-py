@@ -35,6 +35,8 @@ SDK_ACTIONS = {
     "collect_payment_and_resolve": "sdk-collect-payment-and-resolve",
     "make_payout": "sdk-make-payout",
     "make_payout_and_resolve": "sdk-make-payout-and-resolve",
+    "pay_bill": "sdk-pay-bill",
+    "buy_airtime": "sdk-buy-airtime",
     "get_status": "sdk-get-status",
     "get_transaction": "sdk-get-transaction",
     "list_transactions": "sdk-list-transactions",

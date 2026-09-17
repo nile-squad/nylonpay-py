@@ -442,7 +442,7 @@ def _payout_input(**overrides) -> dict[str, Any]:
         "amount": 5000,
         "currency": "UGX",
         "customer": {"name": "Alice", "phone_number": "+256700000000"},
-        "destination": {"account_holder_name": "Alice", "account_number": "123456"},
+        "destination": {"account_holder_name": "Alice", "account_number": "123456", "phone": "+256700000000"},
         "description": "Payout #1",
     }
     base.update(overrides)

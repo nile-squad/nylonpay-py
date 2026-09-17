@@ -16,6 +16,8 @@ def test_valid_config_creates_instance():
         "collect_payment_and_resolve",
         "make_payout",
         "make_payout_and_resolve",
+        "pay_bill",
+        "buy_airtime",
         "get_status",
         "get_transaction",
         "verify_phone",
