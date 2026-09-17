@@ -213,6 +213,9 @@ class PayBillInput:
     utility_code: Literal["LIGHT", "NWSC", "DSTV", "GOTV"]
     area: str | None = None
     bouquet_code: str | None = None
+    #: Merchant UUID. Generated when omitted, same as collect/payout.
+    #: Serialized to the wire as ``reference``.
+    reference: str | None = None
 
 
 @dataclass(frozen=True)
@@ -223,6 +226,9 @@ class BuyAirtimeInput:
     purchase_type: Literal["airtime", "bundle"]
     amount: int | None = None
     bundle_id: str | None = None
+    #: Merchant UUID. Generated when omitted, same as collect/payout.
+    #: Serialized to the wire as ``reference``.
+    reference: str | None = None
 
 
 @dataclass(frozen=True)

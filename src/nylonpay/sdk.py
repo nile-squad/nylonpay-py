@@ -433,8 +433,9 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             _throw_validation("amount must be a positive integer")
         phone = normalize_phone(input.phone, "UGX")
         _validate_phone_format(phone, "phone")
+        reference = _resolve_reference(input.reference)
 
-        payload = dataclasses.replace(input, phone=phone)
+        payload = dataclasses.replace(input, phone=phone, reference=reference)
         result = transport["send"](
             {"action": SDK_ACTIONS["pay_bill"], "payload": to_wire(payload)}
         )
@@ -453,8 +454,9 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             _throw_validation("bundle_id is required")
         phone = normalize_phone(input.phone, "UGX")
         _validate_phone_format(phone, "phone")
+        reference = _resolve_reference(input.reference)
 
-        payload = dataclasses.replace(input, phone=phone)
+        payload = dataclasses.replace(input, phone=phone, reference=reference)
         result = transport["send"](
             {"action": SDK_ACTIONS["buy_airtime"], "payload": to_wire(payload)}
         )

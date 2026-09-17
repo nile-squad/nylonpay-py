@@ -487,3 +487,47 @@ def test_invalid_test_outcome_throws_before_network(captured):
         assert exc2.value.category == "validation"
     finally:
         client.close()
+
+
+def _utility_handler(req, cap):
+    body = cap.get("body") or {}
+    payload = body.get("payload", {})
+    ref = payload.get("reference", "ref_abc")
+    return httpx.Response(
+        200,
+        json=_success_response(
+            {"reference": ref, "status": "pending", "transactionId": "txn-1"},
+            req,
+        ),
+    )
+
+
+def test_pay_bill_auto_generates_reference_if_omitted(captured):
+    sdk, client, cap = _make_sdk(_utility_handler)
+    try:
+        result = sdk.pay_bill(
+            amount=5000,
+            meter_number="12345",
+            phone="+256700000000",
+            utility_code="LIGHT",
+        )
+        assert result.is_ok
+        uuid_re = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        assert re.fullmatch(uuid_re, cap["body"]["payload"]["reference"])
+    finally:
+        client.close()
+
+
+def test_buy_airtime_auto_generates_reference_if_omitted(captured):
+    sdk, client, cap = _make_sdk(_utility_handler)
+    try:
+        result = sdk.buy_airtime(
+            amount=1000,
+            phone="+256700000000",
+            purchase_type="airtime",
+        )
+        assert result.is_ok
+        uuid_re = r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+        assert re.fullmatch(uuid_re, cap["body"]["payload"]["reference"])
+    finally:
+        client.close()
