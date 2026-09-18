@@ -23,6 +23,18 @@ def test_normalize_kenya_local_uses_254():
     assert normalize_phone("0710000000", "KES") == "254710000000"
 
 
+def test_normalize_keeps_kenya_international_without_currency():
+    assert normalize_phone("+254710000000") == "254710000000"
+
+
+def test_normalize_local_for_other_live_markets():
+    assert normalize_phone("0712345678", "TZS") == "255712345678"
+    assert normalize_phone("0781234567", "RWF") == "250781234567"
+    assert normalize_phone("0812345678", "CDF") == "243812345678"
+    assert normalize_phone("0763456789", "ZMW") == "260763456789"
+    assert normalize_phone("0671234567", "XAF") == "237671234567"
+
+
 def test_normalize_already_normalized_passes_through():
     assert normalize_phone("256700000000") == "256700000000"
 

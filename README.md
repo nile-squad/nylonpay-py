@@ -243,7 +243,10 @@ if result.is_ok and result.value.verified:
     print("Registered to:", result.value.customer_name)
 ```
 
-Phone numbers are normalized automatically — any common format works: `+256 700 000 000`, `0700000000`, `256700000000` are all accepted.
+Phone numbers are normalized automatically. Uganda local `0700000000` becomes
+`256700000000`. Kenya `+254 710 000 000` stays `254710000000`. Local `0…`
+numbers take the payment currency's dial code. `verify_phone` has no currency,
+so a local `0…` number is treated as Uganda.
 
 ### create_invoice
 

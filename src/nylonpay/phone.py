@@ -1,11 +1,10 @@
 """Phone number normalization and format validation.
 
 WHY a separate module: phone numbers arrive in many formats
-(``+256 700 000 000``, ``0700000000``, ``256700000000``) but the
-payment provider expects a single canonical form. Normalizing at the
-SDK boundary means validation, transport, and provider formatting all
-operate on the same string — eliminating a class of "works locally,
-fails in production" bugs.
+(``+256 700 000 000``, ``+254 710 000 000``, ``0700000000``) but the
+payment provider expects digits with the market's calling code. Normalizing
+at the SDK boundary means validation, transport, and provider formatting
+all operate on the same string.
 """
 
 from __future__ import annotations
@@ -18,16 +17,20 @@ _DIAL_BY_CURRENCY = {
     "RWF": "250",
     "TZS": "255",
     "UGX": "256",
+    "XAF": "237",
+    "ZMW": "260",
 }
 
 
 def normalize_phone(phone: str, currency: str = "UGX") -> str:
-    """Transform a phone string into the provider's canonical digit-only form.
+    """Transform a phone string into digits with the market's calling code.
 
     Strips whitespace and leading ``+``. A 10-digit number starting with
-    ``0`` takes that currency's dial code (Uganda 256 unless currency is
-    KES, TZS, RWF or CDF). Pure function — transforms but never rejects;
-    pair with ``is_valid_phone_format`` for validation.
+    ``0`` takes that currency's dial code (UGX 256, KES 254, TZS 255,
+    RWF 250, CDF 243, ZMW 260, XAF 237). Unknown currency uses 256.
+    International numbers already carrying a calling code pass through.
+    Pure function — transforms but never rejects; pair with
+    ``is_valid_phone_format`` for validation.
     """
     normalized = re.sub(r"\s+", "", phone)
     normalized = re.sub(r"^\+", "", normalized)
