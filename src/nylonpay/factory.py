@@ -69,6 +69,7 @@ def create_nylon_pay(**kwargs: Any) -> NylonPaySdk:
         "on_delayed": config.on_delayed or "wait",
         "http_client": config.http_client,
         "hooks": config.hooks,
+        "on_error": config.on_error,
     }
 
     instance = create_sdk_instance(resolved)

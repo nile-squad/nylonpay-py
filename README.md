@@ -20,9 +20,14 @@ Create a client, initiate a payment, subscribe to events, and wait for completio
 from nylonpay import create_nylon_pay
 import secrets
 
+def on_error(error):
+    if error.code == "unreachable":
+        pause_payment_attempts(error.message)
+
 nylonpay = create_nylon_pay(
     api_key="npk_test_...",
     api_secret="nps_test_...",
+    on_error=on_error,
 )
 
 payment = nylonpay.collect_payment(
@@ -51,14 +56,15 @@ if tx is not None:
 
 Create the SDK instance with `create_nylon_pay()`. All options are keyword arguments.
 
-Your API key determines the mode — `npk_sandbox_...` for test mode, `npk_live_...` for production. There is no separate `mode` option.
+Your API key determines the mode: use `npk_test_...` for test mode and
+`npk_live_...` for production. There is no separate `mode` option.
 
 | Field | Required | Default | Description |
 |---|---|---|---|
 | `api_key` | Yes | | Must start with `npk_` |
 | `api_secret` | Yes | | Must start with `nps_` |
 | `base_url` | No | `https://api.nylonpay.nilesquad.com/api/services` | Override for a custom endpoint |
-| `timeout_ms` | No | `30000` | Request timeout in milliseconds |
+| `timeout_ms` | No | `90000` | Request timeout in milliseconds |
 | `max_retries` | No | `3` | Retry count for failed requests |
 | `max_poll_interval_ms` | No | `2000` | Interval between status checks |
 | `max_poll_duration_ms` | No | *(none)* | Optional cap on total wait time. Omit to wait until terminal. |
@@ -67,6 +73,7 @@ Your API key determines the mode — `npk_sandbox_...` for test mode, `npk_live_
 | `force` | No | `False` | Bypass instance cache and create a fresh instance |
 | `hooks` | No | `None` | Lifecycle hooks (`SdkHooks`) for cross-cutting concerns |
 | `http_client` | No | `None` | `httpx.Client` for testing injection |
+| `on_error` | No | `None` | Global handler for structured operation errors on this SDK instance |
 
 ```python
 nylonpay = create_nylon_pay(
@@ -349,7 +356,7 @@ if result.is_ok and result.value.delayed and result.value.status == "pending":
     ...
 ```
 
-Set `max_poll_duration_ms` to restore a bounded wait (~5 minutes previously).
+Set `max_poll_duration_ms` when you want to bound the total wait time.
 
 ## Error Handling
 
@@ -383,6 +390,7 @@ try:
     )
 except SdkException as e:
     print(f"Category: {e.category}")
+    print(f"Code: {e.code}")
     print(f"Retryable: {e.retryable}")
     print(f"Message: {e}")
 ```

@@ -42,7 +42,6 @@ from .payment import create_payment_instance
 from .phone import is_valid_phone_format, normalize_phone
 from .poll_interval import is_terminal_transaction_status
 from .poll_until_terminal import poll_until_terminal
-from .pubsub import create_emitter
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
 from .types import (
@@ -63,8 +62,6 @@ from .types import (
     PaymentInstance,
     PhoneVerification,
     SdkError,
-    SdkEvent,
-    SdkEventHandler,
     SdkHooks,
     StatusResponse,
     Transaction,
@@ -250,13 +247,8 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
 
     Config dict keys: ``api_key``, ``api_secret``, ``base_url``, ``timeout_ms``,
     ``max_retries``, ``max_poll_interval_ms``, ``max_poll_duration_ms``,
-    ``max_poll_attempts``, ``http_client``, ``hooks``.
+    ``max_poll_attempts``, ``http_client``, ``hooks``, and ``on_error``.
     """
-    emitter = create_emitter()
-
-    def _emit_unreachable(data: Any) -> None:
-        emitter["emit"]("unreachable", data)
-
     transport = create_transport(
         {
             "api_key": config["api_key"],
@@ -265,7 +257,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             "timeout_ms": config["timeout_ms"],
             "max_retries": config["max_retries"],
             "http_client": config.get("http_client"),
-            "on_unreachable": _emit_unreachable,
+            "on_error": config.get("on_error"),
         }
     )
 
@@ -618,18 +610,6 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         input = VerifyWebhookInput(**kwargs)
         return _verify_webhook_sig(input)
 
-    def on_fn(event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
-        emitter["on"](event, handler)
-        return sdk
-
-    def once_fn(event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
-        emitter["once"](event, handler)
-        return sdk
-
-    def off_fn(event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
-        emitter["off"](event, handler)
-        return sdk
-
     # ------------------------------------------------------------------
     # Bundle into NylonPaySdk protocol
     # ------------------------------------------------------------------
@@ -650,9 +630,6 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
             verify_phone=verify_phone,
             create_invoice=create_invoice,
             verify_webhook_signature=verify_webhook,
-            on=on_fn,
-            once=once_fn,
-            off=off_fn,
         ),
     )
     return sdk

@@ -20,11 +20,16 @@ pip install nylonpay-py
 ```
 
 ```python
-from nylonpay import create_nylon_pay, parse_error
+from nylonpay import UNREACHABLE_CODE, create_nylon_pay, parse_error
+
+def on_error(error):
+    if error.code == UNREACHABLE_CODE:
+        pause_payment_attempts(error.message)
 
 nylonpay = create_nylon_pay(
-    api_key="npk_...",  # must start with "npk_"
-    api_secret="nps_...",  # must start with "nps_"
+    api_key="npk_test_...",
+    api_secret="nps_test_...",
+    on_error=on_error,
 )
 ```
 
@@ -91,6 +96,9 @@ tx = payment.wait()  # transaction or None, does not raise on failure
 ```
 
 Events: `processing`, `success`, `failed`, `cancelled`, `error`.
+
+Use `on_error` in `create_nylon_pay` for one handler across all operations. An
+unreachable error has `category == "network"` and `code == "unreachable"`.
 
 ## Webhooks
 

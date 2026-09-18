@@ -49,10 +49,11 @@ from .reachability import (
     classify_http_status,
     classify_unreachable,
     create_reachability_tracker,
+    unreachable_sdk_error,
 )
 from .signature import create_signature, create_timestamp
 from .slang import Err, Ok, Result
-from .types import SdkError, SdkErrorCategory
+from .types import SdkError, SdkErrorCategory, SdkErrorHandler
 from .verify_response import verify_response_signature
 
 T = TypeVar("T")
@@ -94,7 +95,8 @@ class SdkException(Exception):
     """Exception thrown by operations on initiation failure.
 
     Carries ``category`` and ``retryable`` so merchants can catch and branch
-    on category without parsing the message.
+    on category without parsing the message. ``code`` carries an optional
+    stable Nylon error label.
     """
 
     def __init__(
@@ -102,10 +104,12 @@ class SdkException(Exception):
         category: SdkErrorCategory,
         message: str,
         retryable: bool | None = None,
+        code: str | None = None,
     ) -> None:
         super().__init__(message)
         self.category = category
         self.retryable = retryable
+        self.code = code
 
 
 # --- Public functions ---
@@ -121,6 +125,7 @@ def create_sdk_error(error: SdkError) -> SdkException:
         category=error.category,
         message=error.message,
         retryable=error.retryable,
+        code=error.code,
     )
 
 
@@ -174,7 +179,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
     timeout_ms: int = config.get("timeout_ms", DEFAULT_TIMEOUT_MS)
     max_retries: int = config.get("max_retries", DEFAULT_MAX_RETRIES)
     http_client: httpx.Client | None = config.get("http_client")
-    on_unreachable: Any = config.get("on_unreachable")
+    on_error: SdkErrorHandler | None = config.get("on_error")
 
     def _probe() -> str | None:
         owns = http_client is None
@@ -193,10 +198,15 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
             if owns:
                 client.close()
 
-    reachability = create_reachability_tracker(
-        on_unreachable=on_unreachable,
-        probe=_probe,
-    )
+    reachability = create_reachability_tracker(probe=_probe)
+
+    def _report_error(error: SdkError) -> None:
+        if on_error is not None:
+            Result.try_(lambda: on_error(error))
+
+    def _error_result(error: SdkError) -> Result[Any, str]:
+        _report_error(error)
+        return Err(_serialize_error(error))
 
     def send(request: dict[str, Any]) -> Result[Any, str]:
         """Send a request to the backend with retry and signature verification.
@@ -211,6 +221,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
         """
         blocked = reachability["before_send"]()
         if blocked is not None:
+            _report_error(parse_error(blocked.error))
             return blocked
 
         action: str = request["action"]
@@ -257,7 +268,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                             message="Received an invalid response from the server",
                             retryable=False,
                         )
-                        return Err(_serialize_error(sdk_error))
+                        return _error_result(sdk_error)
 
                     status_code = response.status_code
                     if status_code not in GATEWAY_DOWN_STATUSES:
@@ -279,7 +290,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                         message="Received an invalid response from the server",
                         retryable=False,
                     )
-                    return Err(_serialize_error(sdk_error))
+                    return _error_result(sdk_error)
 
                 raw_body = bytes(body_buffer)
 
@@ -303,20 +314,19 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     gateway_reason = classify_http_status(status_code)
                     if gateway_reason is not None:
                         reachability["note_down"](gateway_reason)
+                        return _error_result(unreachable_sdk_error(gateway_reason))
                     sdk_error = _build_http_error(message=error_message, status_code=status_code)
-                    return Err(_serialize_error(sdk_error))
+                    return _error_result(sdk_error)
 
                 # Status 200 — parse response body
                 response_body = json.loads(raw_body)
 
                 if not isinstance(response_body, dict) or "status" not in response_body:
-                    return Err(
-                        _serialize_error(
-                            SdkError(
-                                category="internal",
-                                message="Received an invalid response from the server",
-                                retryable=False,
-                            )
+                    return _error_result(
+                        SdkError(
+                            category="internal",
+                            message="Received an invalid response from the server",
+                            retryable=False,
                         )
                     )
 
@@ -331,13 +341,11 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     # the backend is signed. Missing signature = tampered or
                     # non-originating response.
                     if response_signature is None:
-                        return Err(
-                            _serialize_error(
-                                SdkError(
-                                    category="internal",
-                                    message="Could not verify the server response",
-                                    retryable=False,
-                                )
+                        return _error_result(
+                            SdkError(
+                                category="internal",
+                                message="Could not verify the server response",
+                                retryable=False,
                             )
                         )
 
@@ -345,13 +353,11 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                         stripped_data, response_signature, api_secret
                     )
                     if not is_valid:
-                        return Err(
-                            _serialize_error(
-                                SdkError(
-                                    category="internal",
-                                    message="Could not verify the server response",
-                                    retryable=False,
-                                )
+                        return _error_result(
+                            SdkError(
+                                category="internal",
+                                message="Could not verify the server response",
+                                retryable=False,
                             )
                         )
 
@@ -361,13 +367,11 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     # trustworthy as the signature once the HMAC verifies.
                     unbound_data, echoed_nonce = _strip_request_nonce(stripped_data)
                     if echoed_nonce != headers.get("x-nylon-nonce"):
-                        return Err(
-                            _serialize_error(
-                                SdkError(
-                                    category="internal",
-                                    message="Could not verify the server response",
-                                    retryable=False,
-                                )
+                        return _error_result(
+                            SdkError(
+                                category="internal",
+                                message="Could not verify the server response",
+                                retryable=False,
                             )
                         )
 
@@ -375,7 +379,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
 
                 # status === False
                 parsed_error = parse_error(message)
-                return Err(json.dumps(_error_to_dict(parsed_error)))
+                return _error_result(parsed_error)
 
             except httpx.TimeoutException as error:
                 reason = classify_unreachable(error)
@@ -389,7 +393,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     time.sleep(backoff)
                     return attempt(current_attempt + 1)
                 reachability["note_down"](reason)
-                return Err(_serialize_error(sdk_error))
+                return _error_result(sdk_error)
 
             except httpx.HTTPError as error:
                 reason = classify_unreachable(error)
@@ -404,7 +408,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     time.sleep(backoff)
                     return attempt(current_attempt + 1)
                 reachability["note_down"](reason)
-                return Err(_serialize_error(sdk_error))
+                return _error_result(sdk_error)
 
         try:
             return attempt(0)

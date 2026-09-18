@@ -17,7 +17,6 @@ from nylonpay.reachability import (
     create_reachability_tracker,
 )
 from nylonpay.transport import create_transport, parse_error
-from nylonpay.types import UnreachableEventData
 
 
 def test_dns_failure_is_host_offline() -> None:
@@ -86,17 +85,14 @@ def test_stale_success_checks_once_then_remembers_the_probe() -> None:
 
 def test_tracker_skips_while_down() -> None:
     now = {"t": 1000.0}
-    emitted: list[str] = []
     tracker = create_reachability_tracker(
         now=lambda: now["t"],
         success_fresh_ms=5 * 60 * 1000,
         down_recheck_ms=15_000,
-        on_unreachable=lambda data: emitted.append(data.reason),
     )
 
     assert tracker["before_send"]() is None
     tracker["note_down"](UNREACHABLE_HOST_OFFLINE)
-    assert emitted == [UNREACHABLE_HOST_OFFLINE]
 
     blocked = tracker["before_send"]()
     assert blocked is not None and blocked.is_err
@@ -104,7 +100,6 @@ def test_tracker_skips_while_down() -> None:
     assert parsed.category == "network"
     assert parsed.code == UNREACHABLE_CODE
     assert parsed.message == UNREACHABLE_HOST_OFFLINE
-    assert emitted == [UNREACHABLE_HOST_OFFLINE]
 
     now["t"] = 1000.0 + 15_001
     assert tracker["before_send"]() is None
@@ -153,7 +148,7 @@ def test_hours_old_down_is_not_trusted() -> None:
 
 def test_transport_skips_second_call_after_connect_error() -> None:
     calls = {"n": 0}
-    emitted: list[UnreachableEventData] = []
+    reported = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls["n"] += 1
@@ -170,7 +165,7 @@ def test_transport_skips_second_call_after_connect_error() -> None:
                 "max_retries": 0,
                 "timeout_ms": 1000,
                 "http_client": client,
-                "on_unreachable": emitted.append,
+                "on_error": reported.append,
             }
         )
         first = t["send"]({"action": "sdk-get-status", "payload": {}})
@@ -178,12 +173,12 @@ def test_transport_skips_second_call_after_connect_error() -> None:
         err = parse_error(first.error)
         assert err.message == UNREACHABLE_NYLON_DOWN
         assert err.code == UNREACHABLE_CODE
-        assert len(emitted) == 1
-        assert emitted[0].reason == UNREACHABLE_NYLON_DOWN
+        assert len(reported) == 1
+        assert reported[0].message == UNREACHABLE_NYLON_DOWN
 
         second = t["send"]({"action": "sdk-get-status", "payload": {}})
         assert second.is_err
         assert calls["n"] == 1
-        assert len(emitted) == 1
+        assert len(reported) == 2
     finally:
         client.close()

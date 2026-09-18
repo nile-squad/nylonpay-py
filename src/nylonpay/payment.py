@@ -114,6 +114,7 @@ def create_payment_instance(
         error: str | None = None,
         category: SdkErrorCategory | None = None,
         retryable: bool | None = None,
+        code: str | None = None,
     ) -> None:
         """Emit a lifecycle event with current transaction data."""
         data = EventData(
@@ -123,6 +124,7 @@ def create_payment_instance(
             transaction=state["transaction"],
             error=error,
             category=category,
+            code=code,
             retryable=retryable,
         )
         emitter["emit"](event, data)
@@ -139,7 +141,14 @@ def create_payment_instance(
                     error_msg = state["transaction"].failure_reason
                 emit_event(event, error=error_msg)
         else:
-            emit_event("error", error="Could not retrieve the transaction details")
+            parsed = parse_error(tx_result.error)
+            emit_event(
+                "error",
+                error=parsed.message,
+                category=parsed.category,
+                retryable=parsed.retryable,
+                code=parsed.code,
+            )
         state["resolved"] = True
 
     def handle_status_update(response: StatusResponse) -> None:
@@ -221,7 +230,13 @@ def create_payment_instance(
             parsed = parse_error(result.error)
             if parsed.category == "not_found":
                 return
-            emit_event("error", parsed.message, parsed.category, parsed.retryable)
+            emit_event(
+                "error",
+                parsed.message,
+                parsed.category,
+                parsed.retryable,
+                parsed.code,
+            )
             state["resolved"] = True
 
     def wait_fn() -> Transaction | None:
@@ -235,7 +250,7 @@ def create_payment_instance(
         if state["pending_error"] is not None:
             err: SdkError = state["pending_error"]
             state["pending_error"] = None
-            emit_event("error", err.message, err.category, err.retryable)
+            emit_event("error", err.message, err.category, err.retryable, err.code)
             return None
 
         if state["resolved"]:

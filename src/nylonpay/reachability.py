@@ -22,7 +22,7 @@ from .config import (
     UNREACHABLE_NYLON_DOWN,
 )
 from .slang import Err, Result
-from .types import SdkError, UnreachableEventData, UnreachableReason
+from .types import SdkError, UnreachableReason
 
 GATEWAY_DOWN_STATUSES = frozenset({502, 503, 504})
 
@@ -119,7 +119,6 @@ def serialize_unreachable(reason: UnreachableReason) -> str:
 
 def create_reachability_tracker(
     *,
-    on_unreachable: Callable[[UnreachableEventData], None] | None = None,
     probe: Callable[[], UnreachableReason | None] | None = None,
     now: Callable[[], float] | None = None,
     success_fresh_ms: int = REACHABILITY_SUCCESS_FRESH_MS,
@@ -139,17 +138,6 @@ def create_reachability_tracker(
         "last_check_at": None,
     }
 
-    def _emit(reason: UnreachableReason) -> None:
-        if on_unreachable is None:
-            return
-        on_unreachable(
-            UnreachableEventData(
-                event="unreachable",
-                reason=reason,
-                timestamp=datetime.now(timezone.utc).isoformat(),
-            )
-        )
-
     def _run_check() -> Result[Any, str] | None:
         memory["last_check_at"] = now_fn()
         if probe is None:
@@ -160,7 +148,6 @@ def create_reachability_tracker(
             return None
         memory["last_failed"] = True
         memory["last_reason"] = reason
-        _emit(reason)
         return Err(serialize_unreachable(reason))
 
     def before_send() -> Result[Any, str] | None:
@@ -194,7 +181,6 @@ def create_reachability_tracker(
         memory["last_failed"] = True
         memory["last_reason"] = reason
         memory["last_check_at"] = now_fn()
-        _emit(reason)
 
     def note_up() -> None:
         t = now_fn()
