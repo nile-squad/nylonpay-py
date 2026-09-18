@@ -38,11 +38,18 @@ from .config import (
     DEFAULT_BASE_URL,
     DEFAULT_MAX_RETRIES,
     DEFAULT_TIMEOUT_MS,
+    REACHABILITY_PROBE_TIMEOUT_MS,
     RETRYABLE_STATUS_CODES,
     SDK_SERVICE,
 )
 from .fingerprint import generate_fingerprint
 from .nonce import generate_nonce
+from .reachability import (
+    GATEWAY_DOWN_STATUSES,
+    classify_http_status,
+    classify_unreachable,
+    create_reachability_tracker,
+)
 from .signature import create_signature, create_timestamp
 from .slang import Err, Ok, Result
 from .types import SdkError, SdkErrorCategory
@@ -167,6 +174,29 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
     timeout_ms: int = config.get("timeout_ms", DEFAULT_TIMEOUT_MS)
     max_retries: int = config.get("max_retries", DEFAULT_MAX_RETRIES)
     http_client: httpx.Client | None = config.get("http_client")
+    on_unreachable: Any = config.get("on_unreachable")
+
+    def _probe() -> str | None:
+        owns = http_client is None
+        client = http_client if http_client is not None else httpx.Client()
+        try:
+            response = client.post(
+                base_url,
+                content=b"{}",
+                headers={"content-type": "application/json"},
+                timeout=REACHABILITY_PROBE_TIMEOUT_MS / 1000,
+            )
+            return classify_http_status(response.status_code)
+        except httpx.HTTPError as error:
+            return classify_unreachable(error)
+        finally:
+            if owns:
+                client.close()
+
+    reachability = create_reachability_tracker(
+        on_unreachable=on_unreachable,
+        probe=_probe,
+    )
 
     def send(request: dict[str, Any]) -> Result[Any, str]:
         """Send a request to the backend with retry and signature verification.
@@ -179,6 +209,10 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
         rests on the constant reference (D19): the backend replays the existing
         transaction for a repeated reference rather than charging again.
         """
+        blocked = reachability["before_send"]()
+        if blocked is not None:
+            return blocked
+
         action: str = request["action"]
         payload: dict[str, Any] = request.get("payload", {})
 
@@ -226,6 +260,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                         return Err(_serialize_error(sdk_error))
 
                     status_code = response.status_code
+                    if status_code not in GATEWAY_DOWN_STATUSES:
+                        reachability["note_up"]()
                     reason_phrase = response.reason_phrase
                     body_buffer = bytearray()
                     oversized = False
@@ -264,6 +300,9 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                         time.sleep(backoff)
                         return attempt(current_attempt + 1)
 
+                    gateway_reason = classify_http_status(status_code)
+                    if gateway_reason is not None:
+                        reachability["note_down"](gateway_reason)
                     sdk_error = _build_http_error(message=error_message, status_code=status_code)
                     return Err(_serialize_error(sdk_error))
 
@@ -338,7 +377,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                 parsed_error = parse_error(message)
                 return Err(json.dumps(_error_to_dict(parsed_error)))
 
-            except httpx.TimeoutException:
+            except httpx.TimeoutException as error:
+                reason = classify_unreachable(error)
                 sdk_error = SdkError(
                     category="timeout",
                     message="The request timed out",
@@ -348,20 +388,22 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     backoff = _calculate_backoff(current_attempt)
                     time.sleep(backoff)
                     return attempt(current_attempt + 1)
+                reachability["note_down"](reason)
                 return Err(_serialize_error(sdk_error))
 
-            except httpx.HTTPError:
+            except httpx.HTTPError as error:
+                reason = classify_unreachable(error)
                 sdk_error = SdkError(
                     category="network",
-                    message=(
-                        "Could not reach the server, check your network connection and try again"
-                    ),
+                    message=reason,
                     retryable=True,
+                    code="unreachable",
                 )
                 if current_attempt < max_retries:
                     backoff = _calculate_backoff(current_attempt)
                     time.sleep(backoff)
                     return attempt(current_attempt + 1)
+                reachability["note_down"](reason)
                 return Err(_serialize_error(sdk_error))
 
         try:
@@ -526,4 +568,6 @@ def _error_to_dict(error: SdkError) -> dict[str, Any]:
     }
     if error.retryable is not None:
         result["retryable"] = error.retryable
+    if error.code is not None:
+        result["code"] = error.code
     return result

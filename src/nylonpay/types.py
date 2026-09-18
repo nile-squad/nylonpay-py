@@ -57,6 +57,13 @@ TransactionMode = Literal["test", "live"]
 
 PaymentEvent = Literal["processing", "success", "failed", "cancelled", "error"]
 
+SdkEvent = Literal["unreachable"]
+
+UnreachableReason = Literal[
+    "host has no internet connection",
+    "Nylon Pay services seem to be down",
+]
+
 WebhookEventType = Literal[
     "transaction.successful",
     "transaction.failed",
@@ -542,6 +549,23 @@ class EventData:
 PaymentEventHandler = Callable[[EventData], None]
 
 
+@dataclass(frozen=True)
+class UnreachableEventData:
+    """Payload for the SDK-instance ``unreachable`` event.
+
+    Subscribe on the factory return value (``nylonpay.on(...)``), not on a
+    PaymentInstance. ``reason`` is one of the two stable strings so you can
+    pause your own calls until connectivity returns.
+    """
+
+    event: Literal["unreachable"]
+    reason: UnreachableReason
+    timestamp: str
+
+
+SdkEventHandler = Callable[[UnreachableEventData], None]
+
+
 # --- Hook types ---
 
 
@@ -776,4 +800,20 @@ class NylonPaySdk(Protocol):
         """Verify that an incoming webhook payload was signed by Nylon Pay.
         Operates on raw payload bytes to prevent re-serialization issues.
         """
+        ...
+
+    def on(self, event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
+        """Listen for the host going offline or Nylon Pay becoming unreachable.
+
+        Fires on the SDK instance, not on a PaymentInstance. Handle this so
+        you stop sending calls until connectivity returns.
+        """
+        ...
+
+    def once(self, event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
+        """Same as :meth:`on` but the handler runs once, then unsubscribes."""
+        ...
+
+    def off(self, event: SdkEvent, handler: SdkEventHandler) -> NylonPaySdk:
+        """Remove a previously registered ``unreachable`` handler."""
         ...

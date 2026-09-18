@@ -26,6 +26,15 @@ DEFAULT_MAX_POLL_ATTEMPTS = None
 
 POLL_JITTER_MS = 250
 
+# --- Reachability ---
+
+REACHABILITY_SUCCESS_FRESH_MS = 5 * 60 * 1000
+REACHABILITY_DOWN_RECHECK_MS = 15_000
+REACHABILITY_PROBE_TIMEOUT_MS = 3_000
+UNREACHABLE_CODE = "unreachable"
+UNREACHABLE_HOST_OFFLINE = "host has no internet connection"
+UNREACHABLE_NYLON_DOWN = "Nylon Pay services seem to be down"
+
 # --- Internal constants ---
 
 SDK_SERVICE = "sdk"
