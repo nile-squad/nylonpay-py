@@ -78,6 +78,18 @@ FailureCode = Literal[
     "cancelled",
 ]
 
+FAILURE_CODES = (
+    "provider_rejection",
+    "customer_timeout",
+    "insufficient_balance",
+    "invalid_number",
+    "internal_error",
+    "limit_exceeded",
+    "cancelled",
+)
+
+SANDBOX_TEST_OUTCOMES = ("success", "fail", *FAILURE_CODES)
+
 SandboxTestOutcome = Literal[
     "success",
     "fail",

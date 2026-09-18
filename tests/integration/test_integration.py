@@ -256,7 +256,7 @@ def test_I14b_sub_minimum_payout_amount() -> None:
             destination={
                 "account_holder_name": "Test",
                 "account_number": "123456",
-            "phone": TEST_PHONE,
+                "phone": TEST_PHONE,
             },
             description="I14b sub-min test",
             reference=_unique_reference(),

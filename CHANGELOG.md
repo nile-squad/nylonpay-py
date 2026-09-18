@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.6.0
+
+Upgrading from 0.5.1.
 
 ### Added
 
@@ -9,10 +11,15 @@
 - `test_outcome` accepts Nylon failure-code literals. `parse_error` reads an optional `-- error-code:` suffix.
 - Requests now send `x-nylon-features`, declaring what this client can parse. The backend withholds wire additions from clients that do not list them, so older releases keep receiving the message shape they were built against.
 - `InvoiceResponse.invoice_number` may be `None`; `url` is a deprecated alias of `payment_link`.
+- `on_hold` is a non-terminal status. Review-stage payouts keep polling; `status_text` explains why.
 
 ### Changed
 
 - `wait()` `on_delayed="return"` now fires when the backend marks a pending payment delayed (default remains `"wait"`).
+
+### Fixed
+
+- Client-side `test_outcome` validation now accepts the same Nylon failure codes the backend does. Types already listed them; the runtime check still rejected anything except `"success"` and `"fail"`.
 
 ## 0.5.1
 

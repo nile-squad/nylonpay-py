@@ -8,9 +8,7 @@ from pathlib import Path
 from nylonpay.types import InvoiceResponse, Transaction, WebhookTransactionSnapshot
 from nylonpay.wire import from_wire
 
-FIXTURES = (
-    Path(__file__).resolve().parents[3] / "typescript" / "tests" / "fixtures"
-)
+FIXTURES = Path(__file__).resolve().parents[3] / "typescript" / "tests" / "fixtures"
 
 
 def _load(name: str) -> dict:

@@ -45,7 +45,9 @@ from .poll_until_terminal import poll_until_terminal
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
 from .types import (
+    SANDBOX_TEST_OUTCOMES,
     AfterHookInput,
+    BuyAirtimeInput,
     CollectPaymentInput,
     CreateInvoiceInput,
     GetStatusInput,
@@ -56,16 +58,15 @@ from .types import (
     ListTransactionsResponse,
     MakePayoutInput,
     NylonPaySdk,
+    PayBillInput,
     PaymentInstance,
     PhoneVerification,
-    PayBillInput,
-    BuyAirtimeInput,
-    UtilityPaymentResponse,
     SdkError,
     SdkHooks,
     StatusResponse,
     Transaction,
     TransactionSummary,
+    UtilityPaymentResponse,
     VerifyPhoneInput,
     VerifyWebhookInput,
 )
@@ -136,8 +137,8 @@ def _validate_phone_format(normalized_phone: str, field_name: str) -> None:
 
 def _validate_test_outcome(test_outcome: Any) -> None:
     """Validate the sandbox-only forced outcome (runtime check for plain-dict callers)."""
-    if test_outcome is not None and test_outcome not in ("success", "fail"):
-        _throw_validation('test_outcome must be "success" or "fail"')
+    if test_outcome is not None and test_outcome not in SANDBOX_TEST_OUTCOMES:
+        _throw_validation('test_outcome must be "success", "fail", or a Nylon failure code')
 
 
 def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
@@ -182,7 +183,12 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
 
     normalized_customer = dataclasses.replace(input.customer, phone_number=destination_phone)
     normalized_destination = dataclasses.replace(input.destination, phone=destination_phone)
-    return dataclasses.replace(input, reference=reference, customer=normalized_customer, destination=normalized_destination)
+    return dataclasses.replace(
+        input,
+        reference=reference,
+        customer=normalized_customer,
+        destination=normalized_destination,
+    )
 
 
 def _apply_before_hook_mutation(mutated: Any, current: Any, prepare_fn: Any) -> Any:
@@ -436,9 +442,7 @@ def create_sdk_instance(config: dict[str, Any]) -> NylonPaySdk:
         reference = _resolve_reference(input.reference)
 
         payload = dataclasses.replace(input, phone=phone, reference=reference)
-        result = transport["send"](
-            {"action": SDK_ACTIONS["pay_bill"], "payload": to_wire(payload)}
-        )
+        result = transport["send"]({"action": SDK_ACTIONS["pay_bill"], "payload": to_wire(payload)})
         if result.is_ok:
             return Ok(from_wire(UtilityPaymentResponse, result.value))
         return Err(result.error)
