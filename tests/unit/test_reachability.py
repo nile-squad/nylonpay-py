@@ -97,6 +97,7 @@ def test_tracker_skips_while_down() -> None:
     blocked = tracker["before_send"]()
     assert blocked is not None and blocked.is_err
     parsed = parse_error(blocked.error)
+    assert parsed.reason == "NETWORK"
     assert parsed.category == "network"
     assert parsed.code == UNREACHABLE_CODE
     assert parsed.message == UNREACHABLE_HOST_OFFLINE
@@ -171,6 +172,7 @@ def test_transport_skips_second_call_after_connect_error() -> None:
         first = t["send"]({"action": "sdk-get-status", "payload": {}})
         assert first.is_err
         err = parse_error(first.error)
+        assert err.reason == "SERVICES_DOWN"
         assert err.message == UNREACHABLE_NYLON_DOWN
         assert err.code == UNREACHABLE_CODE
         assert len(reported) == 1

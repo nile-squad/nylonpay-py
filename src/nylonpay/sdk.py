@@ -42,6 +42,7 @@ from .payment import create_payment_instance
 from .phone import is_valid_phone_format, normalize_phone
 from .poll_interval import is_terminal_transaction_status
 from .poll_until_terminal import poll_until_terminal
+from .sdk_error import build_sdk_error
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
 from .types import (
@@ -61,7 +62,6 @@ from .types import (
     PayBillInput,
     PaymentInstance,
     PhoneVerification,
-    SdkError,
     SdkHooks,
     StatusResponse,
     Transaction,
@@ -87,7 +87,7 @@ def _generate_reference() -> str:
 
 def _throw_validation(message: str) -> NoReturn:
     """Raise a categorised validation error. Never returns."""
-    raise create_sdk_error(SdkError(category="validation", message=message))
+    raise create_sdk_error(build_sdk_error(reason="VALIDATION", message=message))
 
 
 def _resolve_reference(reference: str | None) -> str:

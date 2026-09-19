@@ -42,7 +42,7 @@ def poll_until_terminal(deps: dict[str, Any]) -> Result[Transaction, str]:
         status_result = fetch_status(GetStatusInput(reference=reference))
         if status_result.is_err:
             parsed = parse_error(status_result.error)
-            if parsed.category == "not_found":
+            if parsed.reason == "NOT_FOUND":
                 time.sleep(poll_interval_ms / 1000)
                 continue
             return Err(parsed.message)

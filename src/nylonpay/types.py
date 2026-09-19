@@ -107,6 +107,21 @@ SandboxTestOutcome = Literal[
     "cancelled",
 ]
 
+SdkErrorReason = Literal[
+    "AUTH",
+    "VALIDATION",
+    "LIMIT",
+    "RATE_LIMIT",
+    "ACCOUNT",
+    "PROVIDER",
+    "DUPLICATE",
+    "NOT_FOUND",
+    "INTERNAL",
+    "NETWORK",
+    "SERVICES_DOWN",
+    "TIMEOUT",
+]
+
 SdkErrorCategory = Literal[
     "auth",
     "validation",
@@ -510,14 +525,15 @@ class WebhookPayload:
 class SdkError:
     """Structured error returned by SDK operations.
 
-    ``category`` is machine-readable for branching logic; ``message`` is
-    human-readable for logs and alerts. ``retryable`` tells the merchant
-    whether the same request may succeed on re-invocation.
+    ``reason`` is the field to branch on. ``message`` is for logs and
+    alerts. ``retryable`` says whether the same request may succeed on
+    re-invocation. ``category`` and ``code`` are deprecated aliases.
     """
 
-    category: SdkErrorCategory
+    reason: SdkErrorReason
     message: str
     retryable: bool | None = None
+    category: SdkErrorCategory | None = None
     code: str | None = None
 
 
@@ -535,8 +551,8 @@ class EventData:
     terminal status events (``success``, ``failed``, ``cancelled``) —
     the ``processing`` event can fire before the full record is fetched,
     so use ``reference`` there. ``error`` is populated for the ``"error"``
-    event (network failure, timeout, reference mismatch). ``code`` carries an
-    optional stable Nylon error label.
+    event (network failure, timeout, reference mismatch). ``reason`` is the
+    stable label to branch on.
     """
 
     event: PaymentEvent
@@ -544,6 +560,7 @@ class EventData:
     timestamp: str
     transaction: Transaction | None = None
     error: str | None = None
+    reason: SdkErrorReason | None = None
     category: SdkErrorCategory | None = None
     code: str | None = None
     retryable: bool | None = None

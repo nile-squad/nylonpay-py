@@ -20,11 +20,6 @@ Example:
     payment.on("success", lambda data: print("Paid:", data.transaction))
 """
 
-from .config import (
-    UNREACHABLE_CODE,
-    UNREACHABLE_HOST_OFFLINE,
-    UNREACHABLE_NYLON_DOWN,
-)
 from .factory import create_nylon_pay
 from .slang import Err, Ok, Result
 from .transport import SdkException, create_sdk_error, parse_error
@@ -64,6 +59,7 @@ from .types import (
     SdkError,
     SdkErrorCategory,
     SdkErrorHandler,
+    SdkErrorReason,
     SdkHook,
     SdkHooks,
     StatusResponse,
@@ -85,9 +81,6 @@ __all__ = [
     "DISABLE_FRESHNESS_CHECK",
     "FAILURE_CODES",
     "SANDBOX_TEST_OUTCOMES",
-    "UNREACHABLE_CODE",
-    "UNREACHABLE_HOST_OFFLINE",
-    "UNREACHABLE_NYLON_DOWN",
     "AfterCollectHook",
     "AfterHookInput",
     "AfterPayoutHook",
@@ -124,6 +117,7 @@ __all__ = [
     "SdkError",
     "SdkErrorCategory",
     "SdkErrorHandler",
+    "SdkErrorReason",
     "SdkException",
     "SdkHook",
     "SdkHooks",

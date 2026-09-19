@@ -21,7 +21,7 @@ from nylonpay import create_nylon_pay
 import secrets
 
 def on_error(error):
-    if error.code == "unreachable":
+    if error.reason == "SERVICES_DOWN":
         pause_payment_attempts(error.message)
 
 nylonpay = create_nylon_pay(
@@ -57,7 +57,7 @@ if tx is not None:
 Create the SDK instance with `create_nylon_pay()`. All options are keyword arguments.
 
 Your API key determines the mode: use `npk_test_...` for test mode and
-`npk_live_...` for production. There is no separate `mode` option.
+`npk_live_...` for production.
 
 | Field | Required | Default | Description |
 |---|---|---|---|
@@ -371,7 +371,7 @@ if result.is_err:
     if error.retryable:
         # Retry the operation
         ...
-    print(f"Category: {error.category}, Message: {error.message}")
+    print(f"Reason: {error.reason}, Message: {error.message}")
 ```
 
 ### SdkException
@@ -389,7 +389,7 @@ try:
         description="Test",
     )
 except SdkException as e:
-    print(f"Category: {e.category}")
+    print(f"Reason: {e.reason}")
     print(f"Code: {e.code}")
     print(f"Retryable: {e.retryable}")
     print(f"Message: {e}")

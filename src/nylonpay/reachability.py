@@ -17,10 +17,10 @@ from typing import Any
 from .config import (
     REACHABILITY_DOWN_RECHECK_MS,
     REACHABILITY_SUCCESS_FRESH_MS,
-    UNREACHABLE_CODE,
     UNREACHABLE_HOST_OFFLINE,
     UNREACHABLE_NYLON_DOWN,
 )
+from .sdk_error import build_sdk_error, error_to_dict
 from .slang import Err, Result
 from .types import SdkError, UnreachableReason
 
@@ -96,25 +96,17 @@ def classify_http_status(status_code: int) -> UnreachableReason | None:
 
 
 def unreachable_sdk_error(reason: UnreachableReason) -> SdkError:
-    return SdkError(
-        category="network",
+    return build_sdk_error(
+        reason="NETWORK" if reason == UNREACHABLE_HOST_OFFLINE else "SERVICES_DOWN",
         message=reason,
         retryable=True,
-        code=UNREACHABLE_CODE,
     )
 
 
 def serialize_unreachable(reason: UnreachableReason) -> str:
     import json
 
-    error = unreachable_sdk_error(reason)
-    payload: dict[str, Any] = {
-        "category": error.category,
-        "message": error.message,
-        "retryable": error.retryable,
-        "code": error.code,
-    }
-    return json.dumps(payload)
+    return json.dumps(error_to_dict(unreachable_sdk_error(reason)))
 
 
 def create_reachability_tracker(

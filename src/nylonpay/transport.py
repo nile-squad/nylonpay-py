@@ -19,8 +19,8 @@ constant reference: the backend replays the existing transaction for a
 repeated reference rather than charging again.
 
 **Error encoding:** errors are JSON-serialized ``SdkError`` strings
-(category + message + retryable) so merchants can ``parse_error`` to
-recover structured data and branch on category instead of parsing
+(reason + message + retryable) so merchants can ``parse_error`` to
+recover structured data and branch on reason instead of parsing
 HTTP codes or message text.
 """
 
@@ -51,9 +51,10 @@ from .reachability import (
     create_reachability_tracker,
     unreachable_sdk_error,
 )
+from .sdk_error import build_sdk_error, error_to_dict
 from .signature import create_signature, create_timestamp
 from .slang import Err, Ok, Result
-from .types import SdkError, SdkErrorCategory, SdkErrorHandler
+from .types import SdkError, SdkErrorCategory, SdkErrorHandler, SdkErrorReason
 from .verify_response import verify_response_signature
 
 T = TypeVar("T")
@@ -80,7 +81,7 @@ _KNOWN_CATEGORIES: frozenset[str] = frozenset(
     }
 )
 
-_STATUS_CATEGORY: dict[int, SdkErrorCategory] = {408: "timeout", 429: "rate_limit"}
+_STATUS_REASON: dict[int, SdkErrorReason] = {408: "TIMEOUT", 429: "RATE_LIMIT"}
 
 _ERROR_TYPE_SUFFIX = re.compile(
     r"^(.*?)\s*--\s*error-type:\s*([a-z_]+)(?:\s*--\s*error-code:\s*([a-z0-9_]+))?\s*$",
@@ -94,19 +95,20 @@ _ERROR_TYPE_SUFFIX = re.compile(
 class SdkException(Exception):
     """Exception thrown by operations on initiation failure.
 
-    Carries ``category`` and ``retryable`` so merchants can catch and branch
-    on category without parsing the message. ``code`` carries an optional
-    stable Nylon error label.
+    Carries ``reason`` so merchants can catch and branch without parsing
+    the message. ``category`` and ``code`` are deprecated aliases.
     """
 
     def __init__(
         self,
-        category: SdkErrorCategory,
+        reason: SdkErrorReason,
         message: str,
         retryable: bool | None = None,
+        category: SdkErrorCategory | None = None,
         code: str | None = None,
     ) -> None:
         super().__init__(message)
+        self.reason = reason
         self.category = category
         self.retryable = retryable
         self.code = code
@@ -118,46 +120,45 @@ class SdkException(Exception):
 def create_sdk_error(error: SdkError) -> SdkException:
     """Convert a structured SdkError into a throwable SdkException.
 
-    Used by operations that throw on initiation failure (invalid key,
-    etc.) so merchants can ``except SdkException as e`` and read ``e.category``.
+    Used by operations that throw on initiation failure so merchants can
+    ``except SdkException as e`` and read ``e.reason``.
     """
     return SdkException(
-        category=error.category,
+        reason=error.reason,
         message=error.message,
         retryable=error.retryable,
+        category=error.category,
         code=error.code,
     )
 
 
 def parse_error(error: str) -> SdkError:
-    """Parse an error string into a structured SdkError with a category.
+    """Parse an error string into a structured SdkError with a reason.
 
-    Tries the JSON envelope first (our serialized SdkError format); otherwise
-    pulls the server's `` -- error-type: <category>`` suffix off a raw message,
-    falling back to category ``internal`` when untagged.
+    Tries the JSON envelope first; otherwise pulls the server's
+    `` -- error-type: <category>`` suffix off a raw message, falling back
+    to ``INTERNAL`` when untagged.
     """
-    # Try JSON parse first (our serialized SdkError format)
     parse_result = Result.try_(lambda: json.loads(error))
     if parse_result.is_ok:
         parsed = parse_result.value
-        if (
-            isinstance(parsed, dict)
-            and "category" in parsed
-            and "message" in parsed
-            and isinstance(parsed["category"], str)
-            and isinstance(parsed["message"], str)
-        ):
-            return SdkError(
-                category=parsed["category"],
-                message=parsed["message"],
-                retryable=parsed.get("retryable"),
-                code=parsed.get("code") if isinstance(parsed.get("code"), str) else None,
-            )
+        if isinstance(parsed, dict) and isinstance(parsed.get("message"), str):
+            has_reason = isinstance(parsed.get("reason"), str)
+            has_category = isinstance(parsed.get("category"), str)
+            if has_reason or has_category:
+                return build_sdk_error(
+                    reason=parsed["reason"] if has_reason else None,
+                    category=parsed["category"] if has_category else None,
+                    message=parsed["message"],
+                    retryable=parsed.get("retryable")
+                    if isinstance(parsed.get("retryable"), bool)
+                    else None,
+                    code=parsed.get("code") if isinstance(parsed.get("code"), str) else None,
+                )
 
-    # Raw server message: pull the ` -- error-type: <category>` suffix if present
     category, clean_message, code = _parse_category_from_message(error)
-    return SdkError(
-        category=category if category is not None else "internal",
+    return build_sdk_error(
+        category=category,
         message=clean_message,
         code=code,
     )
@@ -263,8 +264,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                 ) as response:
                     declared_length = response.headers.get("content-length")
                     if declared_length and int(declared_length) > _MAX_RESPONSE_BYTES:
-                        sdk_error = SdkError(
-                            category="internal",
+                        sdk_error = build_sdk_error(
+                            reason="INTERNAL",
                             message="Received an invalid response from the server",
                             retryable=False,
                         )
@@ -285,8 +286,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                             break
 
                 if oversized:
-                    sdk_error = SdkError(
-                        category="internal",
+                    sdk_error = build_sdk_error(
+                        reason="INTERNAL",
                         message="Received an invalid response from the server",
                         retryable=False,
                     )
@@ -323,8 +324,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
 
                 if not isinstance(response_body, dict) or "status" not in response_body:
                     return _error_result(
-                        SdkError(
-                            category="internal",
+                        build_sdk_error(
+                            reason="INTERNAL",
                             message="Received an invalid response from the server",
                             retryable=False,
                         )
@@ -342,8 +343,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     # non-originating response.
                     if response_signature is None:
                         return _error_result(
-                            SdkError(
-                                category="internal",
+                            build_sdk_error(
+                                reason="INTERNAL",
                                 message="Could not verify the server response",
                                 retryable=False,
                             )
@@ -354,8 +355,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     )
                     if not is_valid:
                         return _error_result(
-                            SdkError(
-                                category="internal",
+                            build_sdk_error(
+                                reason="INTERNAL",
                                 message="Could not verify the server response",
                                 retryable=False,
                             )
@@ -368,8 +369,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     unbound_data, echoed_nonce = _strip_request_nonce(stripped_data)
                     if echoed_nonce != headers.get("x-nylon-nonce"):
                         return _error_result(
-                            SdkError(
-                                category="internal",
+                            build_sdk_error(
+                                reason="INTERNAL",
                                 message="Could not verify the server response",
                                 retryable=False,
                             )
@@ -383,8 +384,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
 
             except httpx.TimeoutException as error:
                 reason = classify_unreachable(error)
-                sdk_error = SdkError(
-                    category="timeout",
+                sdk_error = build_sdk_error(
+                    reason="TIMEOUT",
                     message="The request timed out",
                     retryable=True,
                 )
@@ -397,12 +398,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
 
             except httpx.HTTPError as error:
                 reason = classify_unreachable(error)
-                sdk_error = SdkError(
-                    category="network",
-                    message=reason,
-                    retryable=True,
-                    code="unreachable",
-                )
+                sdk_error = unreachable_sdk_error(reason)
                 if current_attempt < max_retries:
                     backoff = _calculate_backoff(current_attempt)
                     time.sleep(backoff)
@@ -535,13 +531,13 @@ def _build_http_error(message: str, status_code: int) -> SdkError:
     """Build a structured SdkError from an HTTP error body's message + status."""
     category, clean_message, code = _parse_category_from_message(message)
 
-    if category is None:
-        category = _STATUS_CATEGORY.get(status_code)
-    if category is None:
-        category = "internal" if status_code >= 500 else "validation"
+    fallback_reason = _STATUS_REASON.get(status_code)
+    if fallback_reason is None:
+        fallback_reason = "INTERNAL" if status_code >= 500 else "VALIDATION"
 
-    return SdkError(
+    return build_sdk_error(
         category=category,
+        reason=fallback_reason if category is None else None,
         message=clean_message,
         retryable=status_code in RETRYABLE_STATUS_CODES,
         code=code,
@@ -566,12 +562,4 @@ def _serialize_error(error: SdkError) -> str:
 
 def _error_to_dict(error: SdkError) -> dict[str, Any]:
     """Convert an SdkError dataclass to a plain dict for JSON serialization."""
-    result: dict[str, Any] = {
-        "category": error.category,
-        "message": error.message,
-    }
-    if error.retryable is not None:
-        result["retryable"] = error.retryable
-    if error.code is not None:
-        result["code"] = error.code
-    return result
+    return error_to_dict(error)

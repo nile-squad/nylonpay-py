@@ -34,6 +34,7 @@ from .types import (
     PaymentInstance,
     SdkError,
     SdkErrorCategory,
+    SdkErrorReason,
     StatusResponse,
     Transaction,
     TransactionStatus,
@@ -112,8 +113,9 @@ def create_payment_instance(
     def emit_event(
         event: PaymentEvent,
         error: str | None = None,
-        category: SdkErrorCategory | None = None,
+        reason: SdkErrorReason | None = None,
         retryable: bool | None = None,
+        category: SdkErrorCategory | None = None,
         code: str | None = None,
     ) -> None:
         """Emit a lifecycle event with current transaction data."""
@@ -123,6 +125,7 @@ def create_payment_instance(
             timestamp=datetime.now(timezone.utc).isoformat(),
             transaction=state["transaction"],
             error=error,
+            reason=reason,
             category=category,
             code=code,
             retryable=retryable,
@@ -145,8 +148,9 @@ def create_payment_instance(
             emit_event(
                 "error",
                 error=parsed.message,
-                category=parsed.category,
+                reason=parsed.reason,
                 retryable=parsed.retryable,
+                category=parsed.category,
                 code=parsed.code,
             )
         state["resolved"] = True
@@ -160,7 +164,7 @@ def create_payment_instance(
             emit_event(
                 "error",
                 error="Received a status update for a different transaction",
-                category="internal",
+                reason="INTERNAL",
             )
             state["resolved"] = True
             return
@@ -204,7 +208,7 @@ def create_payment_instance(
             emit_event(
                 "error",
                 error="Timed out waiting for the transaction status to update",
-                category="timeout",
+                reason="TIMEOUT",
             )
             state["resolved"] = True
             return
@@ -215,7 +219,7 @@ def create_payment_instance(
             emit_event(
                 "error",
                 error="Timed out waiting for the transaction status to update",
-                category="timeout",
+                reason="TIMEOUT",
             )
             state["resolved"] = True
             return
@@ -228,13 +232,14 @@ def create_payment_instance(
             handle_status_update(result.value)
         else:
             parsed = parse_error(result.error)
-            if parsed.category == "not_found":
+            if parsed.reason == "NOT_FOUND":
                 return
             emit_event(
                 "error",
                 parsed.message,
-                parsed.category,
+                parsed.reason,
                 parsed.retryable,
+                parsed.category,
                 parsed.code,
             )
             state["resolved"] = True
@@ -250,7 +255,14 @@ def create_payment_instance(
         if state["pending_error"] is not None:
             err: SdkError = state["pending_error"]
             state["pending_error"] = None
-            emit_event("error", err.message, err.category, err.retryable, err.code)
+            emit_event(
+                "error",
+                err.message,
+                err.reason,
+                err.retryable,
+                err.category,
+                err.code,
+            )
             return None
 
         if state["resolved"]:

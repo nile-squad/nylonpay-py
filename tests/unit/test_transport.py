@@ -103,7 +103,7 @@ def test_missing_signature_fails_closed():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "internal"
+        assert err.reason == "INTERNAL"
     finally:
         client.close()
 
@@ -124,7 +124,7 @@ def test_invalid_signature_rejected():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "internal"
+        assert err.reason == "INTERNAL"
     finally:
         client.close()
 
@@ -141,7 +141,7 @@ def test_server_error_status_false():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "validation"
+        assert err.reason == "VALIDATION"
         assert "bad amount" in err.message
     finally:
         client.close()
@@ -156,7 +156,7 @@ def test_network_error():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "network"
+        assert err.reason == "SERVICES_DOWN"
         assert err.retryable is True
     finally:
         client.close()
@@ -171,7 +171,7 @@ def test_timeout_error():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "timeout"
+        assert err.reason == "TIMEOUT"
         assert err.retryable is True
     finally:
         client.close()
@@ -186,7 +186,7 @@ def test_http_500_maps_to_internal():
         result = t["send"]({"action": "x", "payload": {}})
         assert result.is_err
         err = parse_error(result.error)
-        assert err.category == "internal"
+        assert err.reason == "INTERNAL"
     finally:
         client.close()
 
@@ -241,6 +241,7 @@ def test_auth_headers_present():
 
 def test_parse_error_json_format():
     err = parse_error(json.dumps({"category": "validation", "message": "bad", "retryable": False}))
+    assert err.reason == "VALIDATION"
     assert err.category == "validation"
     assert err.message == "bad"
     assert err.retryable is False
@@ -248,14 +249,16 @@ def test_parse_error_json_format():
 
 def test_parse_error_raw_message_with_suffix():
     err = parse_error("something failed -- error-type: provider")
+    assert err.reason == "PROVIDER"
     assert err.category == "provider"
     assert err.message == "something failed"
 
 
-def test_parse_error_raw_message_with_optional_code():
+def test_parse_error_unrecognized_code_falls_back_to_category_reason():
     err = parse_error(
         "The payout could not start -- error-type: account -- error-code: payout_gate"
     )
+    assert err.reason == "ACCOUNT"
     assert err.category == "account"
     assert err.code == "payout_gate"
     assert err.message == "The payout could not start"
@@ -263,13 +266,14 @@ def test_parse_error_raw_message_with_optional_code():
 
 def test_parse_error_unknown_falls_back_to_internal():
     err = parse_error("plain message")
+    assert err.reason == "INTERNAL"
     assert err.category == "internal"
     assert err.message == "plain message"
 
 
 def test_parse_error_json_missing_keys_falls_through_to_suffix():
     err = parse_error(json.dumps({"foo": "bar"}))
-    # Not a valid SdkError JSON, no suffix -> internal
+    assert err.reason == "INTERNAL"
     assert err.category == "internal"
 
 
@@ -277,9 +281,10 @@ def test_parse_error_json_missing_keys_falls_through_to_suffix():
 
 
 def test_create_sdk_error_returns_sdk_exception():
-    e = SdkError(category="validation", message="bad", retryable=False)
+    e = SdkError(reason="VALIDATION", message="bad", retryable=False, category="validation")
     exc = create_sdk_error(e)
     assert isinstance(exc, SdkException)
+    assert exc.reason == "VALIDATION"
     assert exc.category == "validation"
     assert exc.retryable is False
     assert "bad" in str(exc)
@@ -307,7 +312,7 @@ def test_oversized_response_rejected_when_content_length_declared():
             client.close()
 
         assert result.is_err
-        assert parse_error(result.error).category == "internal"
+        assert parse_error(result.error).reason == "INTERNAL"
     finally:
         transport_module._MAX_RESPONSE_BYTES = original_cap
 
@@ -336,7 +341,7 @@ def test_oversized_response_rejected_without_content_length():
             client.close()
 
         assert result.is_err
-        assert parse_error(result.error).category == "internal"
+        assert parse_error(result.error).reason == "INTERNAL"
     finally:
         transport_module._MAX_RESPONSE_BYTES = original_cap
 
@@ -384,7 +389,7 @@ def test_response_without_echoed_nonce_is_rejected():
         client.close()
 
     assert result.is_err
-    assert parse_error(result.error).category == "internal"
+    assert parse_error(result.error).reason == "INTERNAL"
 
 
 def test_replayed_response_from_an_earlier_request_is_rejected():
@@ -408,4 +413,4 @@ def test_replayed_response_from_an_earlier_request_is_rejected():
 
     assert first.is_ok, "the genuine response must still be accepted"
     assert replayed.is_err, "the replayed blob must not satisfy a later request"
-    assert parse_error(replayed.error).category == "internal"
+    assert parse_error(replayed.error).reason == "INTERNAL"

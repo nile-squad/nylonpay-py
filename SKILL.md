@@ -20,10 +20,10 @@ pip install nylonpay-py
 ```
 
 ```python
-from nylonpay import UNREACHABLE_CODE, create_nylon_pay, parse_error
+from nylonpay import create_nylon_pay, parse_error
 
 def on_error(error):
-    if error.code == UNREACHABLE_CODE:
+    if error.reason == "SERVICES_DOWN":
         pause_payment_attempts(error.message)
 
 nylonpay = create_nylon_pay(
@@ -34,9 +34,8 @@ nylonpay = create_nylon_pay(
 ```
 
 - Server-side only. Never ship `api_secret` to a browser or mobile client.
-- Test vs live mode comes from the **key**, not a config flag. Use your sandbox
-  key for test transactions and your live key for real money. There is no
-  `environment` option.
+- Test vs live mode comes from the **key**. Use your sandbox key for test
+  transactions and your live key for real money.
 - With a sandbox key, pass `test_outcome="success"` or `test_outcome="fail"` on
   `collect_payment`, `collect_payment_and_resolve`, `make_payout` or
   `make_payout_and_resolve` to force the result. Omit it and the sandbox decides
@@ -53,7 +52,7 @@ Sync operations return a `Result`. **Always branch on `is_ok` before touching `.
 ```python
 result = nylonpay.get_status(reference="550e8400-e29b-41d4-a716-446655440000")
 if not result.is_ok:
-    error = parse_error(result.error)  # message, retryable, category, ...
+    error = parse_error(result.error)  # message, retryable, reason, ...
     if error.retryable:
         pass  # safe to retry
     return
@@ -98,7 +97,8 @@ tx = payment.wait()  # transaction or None, does not raise on failure
 Events: `processing`, `success`, `failed`, `cancelled`, `error`.
 
 Use `on_error` in `create_nylon_pay` for one handler across all operations. An
-unreachable error has `category == "network"` and `code == "unreachable"`.
+`NETWORK` means this machine is offline. `SERVICES_DOWN` means Nylon Pay did
+not complete the request.
 
 ## Webhooks
 

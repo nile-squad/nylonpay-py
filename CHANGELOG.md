@@ -6,7 +6,8 @@ Upgrading from 0.5.1.
 
 ### Added
 
-- `on_error` in `create_nylon_pay` receives final structured operation errors for the SDK instance. Offline and Nylon-down errors use `category: "network"` and `code: "unreachable"`. A successful call skips further down-checks for about 5 minutes. If the last check is older than that, it checks again rather than treating Nylon as still down. After a failure, the next operation is checked before it is attempted.
+- `SdkError` uses ALL-CAPS `reason` (`AUTH`, `NETWORK`, `SERVICES_DOWN`, …). `NETWORK` means this machine is offline. `SERVICES_DOWN` means Nylon Pay did not complete the request. `category` and string `code` remain deprecated aliases this release.
+- `on_error` in `create_nylon_pay` receives final structured operation errors for the SDK instance. A successful call skips further down-checks for about 5 minutes. If the last check is older than that, it checks again rather than treating Nylon as still down. After a failure, the next operation is checked before it is attempted.
 - `get_status` now returns `id`, `operator_tid`, `failure_reason`, `failure_category`, `failure_code`, `status_text`, and `delayed`.
 - Transaction and webhook snapshots carry Nylon failure fields. Webhook collections send `type: "collection"` plus `legacyType: "charge"`.
 - `test_outcome` accepts Nylon failure-code literals. `parse_error` reads an optional `-- error-code:` suffix.
