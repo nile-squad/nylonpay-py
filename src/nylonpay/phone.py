@@ -22,21 +22,28 @@ _DIAL_BY_CURRENCY = {
 }
 
 
+_NATIONAL_NUMBER = re.compile(r"\d{9}")
+
+
 def normalize_phone(phone: str, currency: str = "UGX") -> str:
     """Transform a phone string into digits with the market's calling code.
 
     Strips whitespace and leading ``+``. A 10-digit number starting with
     ``0`` takes that currency's dial code (UGX 256, KES 254, TZS 255,
-    RWF 250, CDF 243, ZMW 260, XAF 237). Unknown currency uses 256.
+    RWF 250, CDF 243, ZMW 260, XAF 237), and so does a 9-digit local
+    number typed without its ``0``. Unknown currency uses 256.
     International numbers already carrying a calling code pass through.
     Pure function — transforms but never rejects; pair with
     ``is_valid_phone_format`` for validation.
     """
     normalized = re.sub(r"\s+", "", phone)
     normalized = re.sub(r"^\+", "", normalized)
+    dial = _DIAL_BY_CURRENCY.get(currency.upper(), "256")
     if normalized.startswith("0") and len(normalized) == 10:
-        dial = _DIAL_BY_CURRENCY.get(currency.upper(), "256")
         normalized = f"{dial}{normalized[1:]}"
+    elif _NATIONAL_NUMBER.fullmatch(normalized):
+        # A local number typed without its 0; every market uses 9 digits.
+        normalized = f"{dial}{normalized}"
     return normalized
 
 

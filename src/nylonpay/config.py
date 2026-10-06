@@ -17,7 +17,10 @@ from __future__ import annotations
 
 # --- Defaults (overridable via NylonPayConfig) ---
 
-DEFAULT_BASE_URL = "https://api.nylonpay.nilesquad.com/api/services"
+DEFAULT_BASE_URL = "https://api.nylonpay.com/api/services"
+# The original production URL. Still served, so existing integrations keep
+# working; pass it as ``base_url`` to stay on it.
+LEGACY_BASE_URL = "https://api.nylonpay.nilesquad.com/api/services"
 DEFAULT_TIMEOUT_MS = 90_000
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_MAX_POLL_INTERVAL_MS = 2_000

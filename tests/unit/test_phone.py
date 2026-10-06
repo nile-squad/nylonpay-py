@@ -65,3 +65,9 @@ def test_non_digits():
     assert is_valid_phone_format("+256700000") is False
     assert is_valid_phone_format("256 700 000 000") is False
     assert is_valid_phone_format("abcdefghi") is False
+
+
+def test_nine_digit_local_number_takes_dial_code():
+    assert normalize_phone("712345678", "TZS") == "255712345678"
+    assert normalize_phone("772 123 456", "UGX") == "256772123456"
+    assert normalize_phone("712345678") == "256712345678"

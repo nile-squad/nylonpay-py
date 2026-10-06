@@ -17,11 +17,17 @@ Upgrading from 0.5.1.
 
 ### Changed
 
+- The default API address is now `https://api.nylonpay.com/api/services`. The original address, `https://api.nylonpay.nilesquad.com/api/services`, is still served; pass it as `base_url` to keep using it. Both are exported as `DEFAULT_BASE_URL` and `LEGACY_BASE_URL`. Earlier releases keep working unchanged.
+- `normalize_phone` gives a 9-digit local number typed without its leading `0` the dial code for the payment currency (`712345678` with `TZS` becomes `255712345678`).
 - `wait()` `on_delayed="return"` now fires when the backend marks a pending payment delayed (default remains `"wait"`).
 
 ### Fixed
 
 - Client-side `test_outcome` validation now accepts the same Nylon failure codes the backend does. Types already listed them; the runtime check still rejected anything except `"success"` and `"fail"`.
+
+### Notes
+
+- Invoices need Level 2 verification in every currency. Below Level 2, creating an invoice returns an `account` error that a retry cannot fix.
 
 ## 0.5.1
 

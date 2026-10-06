@@ -20,6 +20,7 @@ Example:
     payment.on("success", lambda data: print("Paid:", data.transaction))
 """
 
+from .config import DEFAULT_BASE_URL, LEGACY_BASE_URL
 from .factory import create_nylon_pay
 from .slang import Err, Ok, Result
 from .transport import SdkException, create_sdk_error, parse_error
@@ -78,7 +79,9 @@ from .types import (
 from .verify_webhook import DISABLE_FRESHNESS_CHECK, verify_webhook_signature
 
 __all__ = [
+    "DEFAULT_BASE_URL",
     "DISABLE_FRESHNESS_CHECK",
+    "LEGACY_BASE_URL",
     "FAILURE_CODES",
     "SANDBOX_TEST_OUTCOMES",
     "AfterCollectHook",

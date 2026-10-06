@@ -63,7 +63,7 @@ Your API key determines the mode: use `npk_test_...` for test mode and
 |---|---|---|---|
 | `api_key` | Yes | | Must start with `npk_` |
 | `api_secret` | Yes | | Must start with `nps_` |
-| `base_url` | No | `https://api.nylonpay.nilesquad.com/api/services` | Override for a custom endpoint |
+| `base_url` | No | `https://api.nylonpay.com/api/services` | Override for a custom endpoint. `LEGACY_BASE_URL` is the original address, still served |
 | `timeout_ms` | No | `90000` | Request timeout in milliseconds |
 | `max_retries` | No | `3` | Retry count for failed requests |
 | `max_poll_interval_ms` | No | `2000` | Interval between status checks |
@@ -252,8 +252,9 @@ if result.is_ok and result.value.verified:
 
 Phone numbers are normalized automatically. Uganda local `0700000000` becomes
 `256700000000`. Kenya `+254 710 000 000` stays `254710000000`. Local `0…`
-numbers take the payment currency's dial code. `verify_phone` has no currency,
-so a local `0…` number is treated as Uganda.
+numbers take the payment currency's dial code, and so does a 9-digit local
+number typed without its `0` (`712345678` with `TZS` becomes `255712345678`).
+`verify_phone` has no currency, so a local number is treated as Uganda.
 
 ### create_invoice
 
