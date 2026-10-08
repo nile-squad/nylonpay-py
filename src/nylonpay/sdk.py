@@ -177,8 +177,12 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     _validate_non_empty(input.description, "description")
     _validate_non_empty(input.destination.account_holder_name, "destination.account_holder_name")
     _validate_non_empty(input.destination.account_number, "destination.account_number")
-    _validate_non_empty(input.destination.phone, "destination.phone")
-    destination_phone = normalize_phone(input.destination.phone, input.currency)
+    # `destination.phone` is typed optional but required at runtime, so the
+    # missing case is routed into the same guard below instead of reaching
+    # the string-only helpers.
+    destination_phone = input.destination.phone or ""
+    _validate_non_empty(destination_phone, "destination.phone")
+    destination_phone = normalize_phone(destination_phone, input.currency)
     _validate_phone_format(destination_phone, "destination.phone")
 
     normalized_customer = dataclasses.replace(input.customer, phone_number=destination_phone)

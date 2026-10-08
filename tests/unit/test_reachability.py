@@ -17,6 +17,7 @@ from nylonpay.reachability import (
     create_reachability_tracker,
 )
 from nylonpay.transport import create_transport, parse_error
+from nylonpay.types import UnreachableReason
 
 
 def test_dns_failure_is_host_offline() -> None:
@@ -41,7 +42,7 @@ def test_does_not_check_while_recent_success_is_fresh() -> None:
     now = {"t": 1000.0}
     probes = {"n": 0}
 
-    def probe() -> str | None:
+    def probe() -> UnreachableReason | None:
         probes["n"] += 1
         return None
 
@@ -65,7 +66,7 @@ def test_stale_success_checks_once_then_remembers_the_probe() -> None:
     now = {"t": 1000.0}
     probes = {"n": 0}
 
-    def probe() -> str | None:
+    def probe() -> UnreachableReason | None:
         probes["n"] += 1
         return None
 
@@ -110,7 +111,7 @@ def test_checks_before_next_call_when_last_failed() -> None:
     now = {"t": 1000.0}
     probes = {"n": 0}
 
-    def probe() -> str:
+    def probe() -> UnreachableReason:
         probes["n"] += 1
         return UNREACHABLE_NYLON_DOWN
 
@@ -131,7 +132,7 @@ def test_hours_old_down_is_not_trusted() -> None:
     now = {"t": 1000.0}
     probes = {"n": 0}
 
-    def probe() -> str | None:
+    def probe() -> UnreachableReason | None:
         probes["n"] += 1
         return None
 

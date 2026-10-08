@@ -91,9 +91,7 @@ def build_sdk_error(
     retryable: bool | None = None,
     code: str | None = None,
 ) -> SdkError:
-    resolved = resolve_reason(
-        reason=reason, category=category, message=message, code=code
-    )
+    resolved = resolve_reason(reason=reason, category=category, message=message, code=code)
     resolved_category = REASON_TO_CATEGORY[resolved]
     resolved_code = code
     if resolved_code is None and resolved in {"NETWORK", "SERVICES_DOWN"}:

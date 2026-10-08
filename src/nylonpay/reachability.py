@@ -159,9 +159,7 @@ def create_reachability_tracker(
 
         if memory["last_failed"]:
             if last_check is not None and t - last_check < down_recheck_ms:
-                return Err(
-                    serialize_unreachable(memory["last_reason"] or UNREACHABLE_NYLON_DOWN)
-                )
+                return Err(serialize_unreachable(memory["last_reason"] or UNREACHABLE_NYLON_DOWN))
             return _run_check()
 
         if last_success is None:

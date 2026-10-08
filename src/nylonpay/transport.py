@@ -54,7 +54,13 @@ from .reachability import (
 from .sdk_error import build_sdk_error, error_to_dict
 from .signature import create_signature, create_timestamp
 from .slang import Err, Ok, Result
-from .types import SdkError, SdkErrorCategory, SdkErrorHandler, SdkErrorReason
+from .types import (
+    SdkError,
+    SdkErrorCategory,
+    SdkErrorHandler,
+    SdkErrorReason,
+    UnreachableReason,
+)
 from .verify_response import verify_response_signature
 
 T = TypeVar("T")
@@ -182,7 +188,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
     http_client: httpx.Client | None = config.get("http_client")
     on_error: SdkErrorHandler | None = config.get("on_error")
 
-    def _probe() -> str | None:
+    def _probe() -> UnreachableReason | None:
         owns = http_client is None
         client = http_client if http_client is not None else httpx.Client()
         try:

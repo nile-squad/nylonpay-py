@@ -81,8 +81,8 @@ from .verify_webhook import DISABLE_FRESHNESS_CHECK, verify_webhook_signature
 __all__ = [
     "DEFAULT_BASE_URL",
     "DISABLE_FRESHNESS_CHECK",
-    "LEGACY_BASE_URL",
     "FAILURE_CODES",
+    "LEGACY_BASE_URL",
     "SANDBOX_TEST_OUTCOMES",
     "AfterCollectHook",
     "AfterHookInput",
