@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.2
+
+Upgrading from 0.6.1.
+
+### Fixed
+
+- Documentation only: removed em dashes from the README and the source docstrings, and reworded the few sentences that punctuation left awkward. No behavior change.
+
 ## 0.6.1
 
 Upgrading from 0.6.0.
