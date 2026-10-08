@@ -176,8 +176,8 @@ if result.is_ok:
 `make_payout` returns immediately with a `reference` for tracking and idempotent retries. The payout status flows through several stages:
 
 - **`pending`** — Payout accepted and queued for processing
-- **`processing`** — Provider is actively handling the disbursement
-- **`on_hold`** — Payout is under review (liquidity or compliance checks). A payout from a `KES`, `TZS`, `RWF`, or `CDF` wallet also stays here until you confirm its exchange rate on the dashboard; unconfirmed after 24 hours, it ends `cancelled` and the money returns to your wallet. Non-terminal; will complete to `successful`, `failed`, or `cancelled`.
+- **`processing`** — Payout is being processed
+- **`on_hold`** — Payout waiting on review. Polling continues and it finishes on its own as `successful`, `failed`, or `cancelled`. From a `KES`, `TZS`, `RWF`, or `CDF` wallet it also waits for you to confirm the exchange rate on the dashboard; with no answer within 24 hours it ends `cancelled` and the money returns to your wallet.
 - **`successful`** — Payout completed; funds sent to destination
 - **`failed`** — Payout failed; funds refunded to merchant account
 - **`cancelled`** — Payout was cancelled by the merchant
@@ -187,7 +187,7 @@ if result.is_ok:
 2. Listening for terminal events: `"success"`, `"failed"`, `"cancelled"`
 3. Receiving webhook notifications at your configured endpoint
 
-The SDK treats `on_hold` as a non-terminal status — polling continues automatically until the payout reaches a terminal state. Use the `status_text` field for human-readable details about review holds.
+The SDK keeps polling while a payout is `on_hold` and stops when it reaches a final state. `status_text` carries the review sentence, for example "This payout is being reviewed and will complete shortly."
 
 ```python
 payout = nylonpay.make_payout(
@@ -205,7 +205,7 @@ def on_processing(data):
     # Payout is in flight (pending, processing, or on_hold)
     if data.transaction and data.transaction.status == "on_hold":
         print("Payout under review:", data.transaction.status_text)
-        # "Payout is being reviewed and will complete shortly"
+        # "This payout is being reviewed and will complete shortly"
 
 payout.on("processing", on_processing)
 
@@ -317,7 +317,7 @@ The verification checks authenticity and freshness. Pass `tolerance_seconds=0` t
 | `cancelled` | Transaction was cancelled |
 | `error` | Network or server error |
 
-For payouts specifically, `on_hold` indicates the payout is under review (liquidity or compliance checks). A payout from a `KES`, `TZS`, `RWF`, or `CDF` wallet also stays here until you confirm its exchange rate on the dashboard; unconfirmed after 24 hours, it ends `cancelled` and the money returns to your wallet. Polling continues automatically; use `transaction?.status_text` for a human-readable explanation.
+A payout on `on_hold` is waiting on review and completes on its own. From a `KES`, `TZS`, `RWF`, or `CDF` wallet it also waits for you to confirm the exchange rate on the dashboard; with no answer within 24 hours it ends `cancelled` and the money returns to your wallet. Polling continues automatically; read `transaction?.status_text` for the review sentence.
 
 ```python
 def on_success(data):
