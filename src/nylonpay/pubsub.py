@@ -3,7 +3,7 @@
 WHY a custom emitter: the SDK needs pub/sub for payment status
 transitions (``processing``, ``success``, ``failed``, etc.) without
 pulling in a third-party dependency. The emitter is a closure-based
-factory — no classes, no inheritance — returning a dict of functions
+factory, no classes, no inheritance, returning a dict of functions
 that share private listener state.
 """
 

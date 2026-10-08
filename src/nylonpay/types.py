@@ -8,7 +8,7 @@ These types are the contract between merchant code and the SDK. They're
 frozen dataclasses (immutable after construction) so merchants can safely
 pass them around without worrying about accidental mutation mid-operation.
 The shapes, field names (after casing conversion), and value constraints
-match the SDK spec (v1.3.0) — every SDK implementation exposes the same
+match the SDK spec (v1.3.0), every SDK implementation exposes the same
 fields so backend behavior is predictable regardless of language.
 """
 
@@ -330,7 +330,7 @@ class CreateInvoiceInput:
 class ListTransactionsInput:
     """Filters for listing transactions.
 
-    All fields are optional — omit to return all transactions for the account.
+    All fields are optional, omit to return all transactions for the account.
     Multiple tags use AND semantics: only transactions carrying every listed
     tag are returned.
     """
@@ -492,7 +492,7 @@ class WebhookTransactionSnapshot:
     status: TransactionStatus
     previousStatus: TransactionStatus
     # These three are ``None`` whenever the backend has no value stored for
-    # the transaction (older rows especially) — it sends the key with an
+    # the transaction (older rows especially). It sends the key with an
     # explicit null rather than omitting it.
     type: TransactionType | None
     method: PaymentMethod | None
@@ -509,7 +509,7 @@ class WebhookPayload:
     """Structured payload delivered to the merchant's webhook endpoint.
 
     Merchants should verify the ``x-nylon-signature`` header before
-    trusting the data — the signature does NOT live in the body.
+    trusting the data, the signature does NOT live in the body.
     """
 
     delivery_id: str
@@ -548,8 +548,8 @@ class EventData:
     """Data passed to every payment event handler.
 
     ``reference`` is always present; ``transaction`` is populated for
-    terminal status events (``success``, ``failed``, ``cancelled``) —
-    the ``processing`` event can fire before the full record is fetched,
+    terminal status events (``success``, ``failed``, ``cancelled``).
+    The ``processing`` event can fire before the full record is fetched,
     so use ``reference`` there. ``error`` is populated for the ``"error"``
     event (network failure, timeout, reference mismatch). ``reason`` is the
     stable label to branch on.
@@ -574,7 +574,7 @@ PaymentEventHandler = Callable[[EventData], None]
 
 @dataclass(frozen=True)
 class InitiationResult:
-    """Result of a payment initiation — reference and initial status.
+    """Result of a payment initiation, reference and initial status.
 
     Used as the success value in the Result passed to after-hooks.
     """
@@ -622,7 +622,7 @@ class SdkHook(Generic[HookFn]):
     """Wrapper applied to every lifecycle hook.
 
     The SDK runs ``fn`` inside a safe boundary, so a throw or exception in
-    merchant code never bubbles into the payment flow — it is routed to
+    merchant code never bubbles into the payment flow. It is routed to
     ``on_error`` instead.
 
     WHY ``on_error`` is required: an unhandled hook failure in a payments
@@ -642,7 +642,7 @@ class SdkHook(Generic[HookFn]):
 class SdkHooks:
     """Lifecycle hooks registered once at SDK creation.
 
-    Each hook fires on every matching operation — use them for
+    Each hook fires on every matching operation, use them for
     cross-cutting concerns like logging, audit trails, and payload
     enrichment. Every hook is wrapped in :class:`SdkHook` so merchant
     code can never crash the payment flow.
@@ -664,7 +664,7 @@ class NylonPayConfig:
     All timeouts and retry limits are configurable for different
     network environments.
 
-    Test vs. live mode is determined by the API key, not by config —
+    Test vs. live mode is determined by the API key, not by config,
     a sandbox key routes to test providers, a live key processes
     real money.
     """
@@ -694,7 +694,7 @@ class PaymentInstance(Protocol):
     Subscribe to status transitions with ``on``/``once``/``off``, or
     block until completion with ``wait``.
 
-    Implemented as a ``SimpleNamespace`` with closures — no class.
+    Implemented as a ``SimpleNamespace`` with closures, no class.
     ``reference`` and ``status`` are plain attributes (``reference`` is
     immutable after creation, ``status`` is updated in place by the
     polling loop).
@@ -728,20 +728,20 @@ class NylonPaySdk(Protocol):
     """SDK instance returned by the factory.
 
     Provides all payment operations and the webhook verification utility.
-    All operations are synchronous — no asyncio.
+    All operations are synchronous, no asyncio.
     """
 
     def collect_payment(self, **kwargs: Any) -> PaymentInstance:
         """Initiate a payment collection. Returns a PaymentInstance that polls
         for status updates and emits events. Throws synchronously only on
-        invalid input — server-side initiation rejections surface as an
+        invalid input, server-side initiation rejections surface as an
         ``"error"`` event.
         """
         ...
 
     def collect_payment_and_resolve(self, **kwargs: Any) -> Result[Transaction, str]:
         """Initiate a collection and block until terminal state. Single
-        request/response call — server polls internally.
+        request/response call, server polls internally.
         """
         ...
 
@@ -766,7 +766,7 @@ class NylonPaySdk(Protocol):
         ...
 
     def get_status(self, **kwargs: Any) -> Result[StatusResponse, str]:
-        """One-shot status check. Does not poll — returns current server state."""
+        """One-shot status check. Does not poll, returns current server state."""
         ...
 
     def get_transaction(self, **kwargs: Any) -> Result[Transaction, str]:
@@ -776,7 +776,7 @@ class NylonPaySdk(Protocol):
     def list_transactions(self, **kwargs: Any) -> Result[ListTransactionsResponse, str]:
         """List transactions for the account with optional filters.
 
-        Multiple tags use AND semantics — only transactions carrying all
+        Multiple tags use AND semantics, only transactions carrying all
         listed tags are returned. Returns a paginated result.
         """
         ...

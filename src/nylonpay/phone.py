@@ -33,7 +33,7 @@ def normalize_phone(phone: str, currency: str = "UGX") -> str:
     RWF 250, CDF 243, ZMW 260, XAF 237), and so does a 9-digit local
     number typed without its ``0``. Unknown currency uses 256.
     International numbers already carrying a calling code pass through.
-    Pure function — transforms but never rejects; pair with
+    Pure function, transforms but never rejects; pair with
     ``is_valid_phone_format`` for validation.
     """
     normalized = re.sub(r"\s+", "", phone)

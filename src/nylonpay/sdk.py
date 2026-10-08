@@ -8,18 +8,18 @@ get_status, get_transaction, list_transactions, get_transactions_by_tag,
 verify_phone, create_invoice, and verify_webhook_signature. Each operation
 follows the same lifecycle:
 
-1. **Validate** — check input fields (amounts, references, phone format)
+1. **Validate**, check input fields (amounts, references, phone format)
    and throw ``SdkException`` on programmer errors before any network call.
-2. **Hook (before)** — run the merchant's ``before_*`` hook if registered,
+2. **Hook (before)**, run the merchant's ``before_*`` hook if registered,
    then re-validate the (possibly mutated) input so hooks can't bypass
    validation (spec invariant #12).
-3. **Transport** — sign and send the request via the transport layer.
-4. **Hook (after)** — run the merchant's ``after_*`` hook with the result.
-5. **Return** — ``PaymentInstance`` for event-driven ops, ``Result`` for
+3. **Transport**, sign and send the request via the transport layer.
+4. **Hook (after)**, run the merchant's ``after_*`` hook with the result.
+5. **Return**, ``PaymentInstance`` for event-driven ops, ``Result`` for
    query/resolve ops.
 
 The validation, hook lifecycle, wire conversion, and error handling are
-identical across all SDK implementations per the spec — a merchant porting
+identical across all SDK implementations per the spec, a merchant porting
 from TypeScript to Python gets the same behavior, not a re-interpretation.
 """
 
@@ -95,7 +95,7 @@ def _resolve_reference(reference: str | None) -> str:
 
     Uses ``fullmatch``, not ``match``: Python's ``$`` also matches immediately
     before a single trailing newline, so ``re.match`` accepts
-    ``"<uuid>\\n"`` — a value the TypeScript SDK's identical-looking regex
+    ``"<uuid>\\n"``, a value the TypeScript SDK's identical-looking regex
     rejects, since JavaScript's ``$`` has no such exception. The reference is a
     cross-language spec contract and is used downstream as an idempotency and
     lookup key, so both SDKs must accept exactly the same set of strings.
@@ -165,7 +165,7 @@ def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
 def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     """Full validate + normalize + resolve reference for a payout.
 
-    Sibling of :func:`_prepare_collect_payload` — same invariant #12 guarantee.
+    Sibling of :func:`_prepare_collect_payload`, same invariant #12 guarantee.
     """
     reference = _resolve_reference(input.reference)
     _validate_payout_amount(input.amount, input.currency)
@@ -226,7 +226,7 @@ def _run_hook(hook: Any, *args: Any) -> Any:
 
     A disabled or unset hook is a no-op. The hook's ``fn`` runs inside a
     try/except so a throw in merchant code never bubbles into the payment
-    flow — it is routed to ``on_error`` (which is itself wrapped, so a
+    flow, it is routed to ``on_error`` (which is itself wrapped, so a
     faulty handler can't crash us either).
 
     Returns the hook's resolved value, or ``None`` when skipped / failed.

@@ -2,17 +2,17 @@
 
 Handles the Nile envelope format, HMAC request signing, response signature
 verification, retries with jittered backoff, and timeouts. The most critical
-module in the SDK — every payment operation flows through ``send``.
+module in the SDK, every payment operation flows through ``send``.
 
 **Security model:** each request is signed with a fresh nonce, timestamp,
 and HMAC-SHA256 over the canonical payload. The backend rejects requests
 with stale timestamps (replay protection) or mismatched signatures
-(authenticity). Responses are verified the same way — fail-closed (D15):
+(authenticity). Responses are verified the same way, fail-closed (D15):
 a missing or invalid ``_responseSignature`` is treated as tampered, never
 returned to the caller as success.
 
-**Retry strategy (D19):** the body is built once (the payload — including
-the reference idempotency key — is constant across attempts), but each
+**Retry strategy (D19):** the body is built once (the payload, including
+the reference idempotency key, is constant across attempts), but each
 attempt is signed fresh. This keeps every retry inside the backend's
 timestamp-freshness window. Safety against double-processing rests on the
 constant reference: the backend replays the existing transaction for a
@@ -69,7 +69,7 @@ T = TypeVar("T")
 
 _CACHED_FINGERPRINT: str = generate_fingerprint()
 
-_MAX_RESPONSE_BYTES: int = 10 * 1024 * 1024  # 10 MiB — reject oversized responses before parsing
+_MAX_RESPONSE_BYTES: int = 10 * 1024 * 1024  # 10 MiB, reject oversized responses before parsing
 
 _KNOWN_CATEGORIES: frozenset[str] = frozenset(
     {
@@ -178,7 +178,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
     and configuration.
 
     The ``http_client`` key accepts an ``httpx.Client`` for testing
-    injection — when omitted, a new client is created per call.
+    injection. When omitted, a new client is created per call.
     """
     api_key: str = config["api_key"]
     api_secret: str = config["api_secret"]
@@ -218,8 +218,8 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
     def send(request: dict[str, Any]) -> Result[Any, str]:
         """Send a request to the backend with retry and signature verification.
 
-        The envelope/body is built once (the payload — including the reference
-        idempotency key — is constant across attempts), but each attempt is
+        The envelope/body is built once (the payload, including the reference
+        idempotency key, is constant across attempts), but each attempt is
         signed fresh: a new nonce, timestamp, and signature per try. This keeps
         every retry inside the backend's timestamp-freshness window and means a
         retry is never rejected as a nonce replay. Safety against double-processing
@@ -244,7 +244,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
         client = http_client if http_client is not None else httpx.Client(limits=limits)
 
         def attempt(current_attempt: int) -> Result[Any, str]:
-            # Sign per attempt — fresh nonce/timestamp/signature over the
+            # Sign per attempt, fresh nonce/timestamp/signature over the
             # constant payload (D19 invariant).
             headers = _build_auth_headers(
                 api_key=api_key,
@@ -258,7 +258,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                 # body is read. A plain post() reads the whole response into
                 # memory before any size check can run, so the guard could only
                 # discard an oversized body after already paying its memory
-                # cost — and did nothing at all when the server sent no
+                # cost, and did nothing at all when the server sent no
                 # Content-Length (chunked). Reading in chunks with a running
                 # total bounds peak memory whatever the server claims.
                 with client.stream(
@@ -286,7 +286,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     for chunk in response.iter_bytes():
                         body_buffer.extend(chunk)
                         if len(body_buffer) > _MAX_RESPONSE_BYTES:
-                            # Stop reading immediately — leaving the `with`
+                            # Stop reading immediately, leaving the `with`
                             # block closes the connection mid-body.
                             oversized = True
                             break
@@ -325,7 +325,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                     sdk_error = _build_http_error(message=error_message, status_code=status_code)
                     return _error_result(sdk_error)
 
-                # Status 200 — parse response body
+                # Status 200, parse response body
                 response_body = json.loads(raw_body)
 
                 if not isinstance(response_body, dict) or "status" not in response_body:
@@ -344,7 +344,7 @@ def create_transport(config: dict[str, Any]) -> dict[str, Any]:
                 if status is True:
                     stripped_data, response_signature = _strip_response_signature(data)
 
-                    # Fail closed — every authenticated success response from
+                    # Fail closed, every authenticated success response from
                     # the backend is signed. Missing signature = tampered or
                     # non-originating response.
                     if response_signature is None:
@@ -440,7 +440,7 @@ CLIENT_FEATURES: tuple[str, ...] = ("error-code",)
 ``error-code`` says :func:`parse_error` can read the optional
 ``-- error-code: <code>`` tail. Every release before this one parsed the
 category with a regex anchored at the end of the message, so a code appended
-after it left them with no match — category silently downgraded to ``internal``,
+after it left them with no match, category silently downgraded to ``internal``,
 and the raw suffixes shown to the user as part of the message. The backend only
 appends a code for clients listed here.
 """
@@ -455,7 +455,7 @@ def _build_auth_headers(
     """Build auth headers with fresh nonce, timestamp, and signature.
 
     The signature covers the inner payload (operation input + fingerprint),
-    NOT the full Nile envelope — matching the server's verification.
+    NOT the full Nile envelope, matching the server's verification.
     """
     nonce = generate_nonce()
     timestamp = create_timestamp()
@@ -490,7 +490,7 @@ def _strip_request_nonce(data: Any) -> tuple[Any, str | None]:
     Returns ``(data_without_nonce, nonce)``; nonce is ``None`` when the field
     is absent or not a string. The backend signs this value into the response,
     so comparing it against the nonce we sent is what binds a response to the
-    request it answers — without it a captured response stays validly signed
+    request it answers, without it a captured response stays validly signed
     forever and can be replayed to a later call.
     """
     if not isinstance(data, dict) or "_requestNonce" not in data:

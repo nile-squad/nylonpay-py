@@ -34,7 +34,7 @@ from functools import lru_cache
 def generate_fingerprint() -> str:
     """Derive a SHA-256 hex digest from OS metadata.
 
-    Cached after first call — the environment cannot change within a
+    Cached after first call. The environment cannot change within a
     running process, so recomputing is wasteful.
     """
     components = "|".join(

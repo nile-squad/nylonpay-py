@@ -1,13 +1,13 @@
 """Constants and defaults for the Nylon Pay SDK.
 
-These values define the SDK's operational envelope — timeouts, retry limits,
+These values define the SDK's operational envelope, timeouts, retry limits,
 polling cadence, and validation thresholds. They're derived from the SDK
 spec (v1.3.0) which sets these as cross-language invariants: every SDK
 implementation (TypeScript, Python, future languages) must enforce the same
 minimums and defaults so backend behavior is predictable regardless of
 which language the merchant integrates with.
 
-Defaults are overridable via ``NylonPayConfig`` — merchants with slow
+Defaults are overridable via ``NylonPayConfig``, merchants with slow
 networks or long-running payment flows can widen timeouts and poll limits
 without touching the spec-mandated validation thresholds (min amounts,
 reference length).

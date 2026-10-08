@@ -88,7 +88,7 @@ The factory caches instances by `api_key + base_url + sha256(api_secret)`. Rotat
 
 ## Operations
 
-All operations accept keyword arguments. Nested types (`customer`, `destination`, `items`) accept plain dicts — no need to import dataclasses.
+All operations accept keyword arguments. Nested types (`customer`, `destination`, `items`) accept plain dicts, no need to import dataclasses.
 
 ### collect_payment
 
@@ -118,7 +118,7 @@ payment.on("failed", on_failed)
 
 ### collect_payment_and_resolve
 
-Block until the collection reaches a terminal state. Single request/response — the server checks status internally, no client-side waiting.
+Block until the collection reaches a terminal state. Single request/response. The server checks status internally, no client-side waiting.
 
 ```python
 result = nylonpay.collect_payment_and_resolve(
@@ -175,12 +175,12 @@ if result.is_ok:
 
 `make_payout` returns immediately with a `reference` for tracking and idempotent retries. The payout status flows through several stages:
 
-- **`pending`** — Payout accepted and queued for processing
-- **`processing`** — Payout is being processed
-- **`on_hold`** — Payout waiting on review. Polling continues and it finishes on its own as `successful`, `failed`, or `cancelled`. From a `KES`, `TZS`, `RWF`, or `CDF` wallet it also waits for you to confirm the exchange rate on the dashboard; with no answer within 24 hours it ends `cancelled` and the money returns to your wallet.
-- **`successful`** — Payout completed; funds sent to destination
-- **`failed`** — Payout failed; funds refunded to merchant account
-- **`cancelled`** — Payout was cancelled by the merchant
+- **`pending`**, Payout accepted and queued for processing
+- **`processing`**, Payout is being processed
+- **`on_hold`**, Payout waiting on review. Polling continues and it finishes on its own as `successful`, `failed`, or `cancelled`. From a `KES`, `TZS`, `RWF`, or `CDF` wallet it also waits for you to confirm the exchange rate on the dashboard; with no answer within 24 hours it ends `cancelled` and the money returns to your wallet.
+- **`successful`**, Payout completed; funds sent to destination
+- **`failed`**, Payout failed; funds refunded to merchant account
+- **`cancelled`**, Payout was cancelled by the merchant
 
 **Polling and webhooks:** Monitor payout progress by:
 1. Subscribing to `"processing"` events (covers `pending`, `processing`, and `on_hold` states)
@@ -222,7 +222,7 @@ if tx is not None:
 
 ### get_status
 
-One-shot status check for a transaction. Does not wait — returns the current server-side state.
+One-shot status check for a transaction. Does not wait, returns the current server-side state.
 
 ```python
 result = nylonpay.get_status(reference="550e8400-e29b-41d4-a716-446655440000")
@@ -258,7 +258,7 @@ number typed without its `0` (`712345678` with `TZS` becomes `255712345678`).
 
 ### create_invoice
 
-Generate a hosted payment link. Card payments are only supported via this hosted flow — card details never reach your servers.
+Generate a hosted payment link. Card payments are only supported via this hosted flow. Card details never reach your servers.
 
 ```python
 result = nylonpay.create_invoice(
@@ -275,7 +275,7 @@ if result.is_ok:
 
 ### verify_webhook_signature
 
-Verify incoming webhook payloads before processing. Operates on raw payload bytes or string — never re-serialize parsed JSON, which would alter the signed content.
+Verify incoming webhook payloads before processing. Operates on raw payload bytes or string, never re-serialize parsed JSON, which would alter the signed content.
 
 ```python
 from nylonpay import VerifyWebhookInput, verify_webhook_signature
@@ -289,7 +289,7 @@ is_valid = verify_webhook_signature(
 )
 
 if not is_valid:
-    # Reject — payload did not originate from Nylon Pay
+    # Reject: payload did not originate from Nylon Pay
     ...
 ```
 
@@ -353,7 +353,7 @@ nylonpay = create_nylon_pay(
 
 result = nylonpay.collect_payment_and_resolve(...)
 if result.is_ok and result.value.delayed and result.value.status == "pending":
-    # Still in flight — handle via webhooks
+    # Still in flight, handle via webhooks
     ...
 ```
 
@@ -416,7 +416,7 @@ except SdkException as e:
 
 Lifecycle hooks fire on every matching operation. Use them for cross-cutting concerns like logging, audit trails, and payload enrichment.
 
-Each hook is wrapped in `SdkHook` which provides a safe boundary — if the hook's `fn` raises an exception, it is routed to `on_error` instead of crashing the payment flow.
+Each hook is wrapped in `SdkHook`, which provides a safe boundary. If the hook's `fn` raises an exception, it is routed to `on_error` instead of crashing the payment flow.
 
 ```python
 from nylonpay import create_nylon_pay, SdkHook, SdkHooks

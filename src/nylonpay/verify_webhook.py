@@ -23,7 +23,7 @@ DISABLE_FRESHNESS_CHECK = -1
 """Explicit opt-out of the freshness check.
 
 Must be passed deliberately. ``tolerance_seconds=0`` does NOT disable the
-check — it means a tolerance of zero seconds, i.e. as strict as it gets, which
+check, it means a tolerance of zero seconds, i.e. as strict as it gets, which
 in practice rejects almost everything. That is the safe reading: a developer
 reaching for ``0`` is asking for maximum strictness, and previously got the
 exact opposite (no freshness check at all, silently).
@@ -35,8 +35,8 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
 
     Two checks, both must pass:
 
-    1. **Authenticity** — HMAC-SHA256 over raw payload bytes matches the signature.
-    2. **Freshness** — the timestamp inside the signed body is within
+    1. **Authenticity**, HMAC-SHA256 over raw payload bytes matches the signature.
+    2. **Freshness**, the timestamp inside the signed body is within
        ``tolerance_seconds`` of now (default 300s). ``0`` means a tolerance of
        zero seconds (maximum strictness), NOT "off"; pass
        ``tolerance_seconds=DISABLE_FRESHNESS_CHECK`` to opt out deliberately.
@@ -53,8 +53,8 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
     ).hexdigest()
 
     # One canonical signature: lowercase hex, byte-for-byte what Nylon Pay
-    # sends in `x-nylon-signature`. Any other spelling of the same value —
-    # uppercase hex in particular — is rejected rather than normalized, so
+    # sends in `x-nylon-signature`. Any other spelling of the same value,
+    # uppercase hex in particular, is rejected rather than normalized, so
     # there is exactly one accepted form and both SDKs agree on it.
 
     # Length guard before constant-time comparison
@@ -64,7 +64,7 @@ def verify_webhook_signature(input: VerifyWebhookInput) -> bool:
     if not hmac.compare_digest(input.signature, expected):
         return False
 
-    # Signature authentic — now enforce freshness
+    # Signature authentic, now enforce freshness
     tolerance = (
         input.tolerance_seconds
         if input.tolerance_seconds is not None
@@ -97,7 +97,7 @@ def _normalize_iso(raw: str) -> str:
 
     Nylon Pay stamps deliveries with JavaScript's ``toISOString()``, which ends
     in ``Z``. ``datetime.fromisoformat`` only learned to accept that in 3.11,
-    so on 3.10 — which this package supports — every genuine webhook would
+    so on 3.10, which this package supports, every genuine webhook would
     otherwise fail the freshness check and be rejected as a replay.
     """
     if raw.endswith(("Z", "z")):
@@ -127,7 +127,7 @@ def _extract_signed_timestamp_ms(payload_string: str) -> int | None:
         return int(raw * 1000) if raw < 1e12 else int(raw)
 
     if isinstance(raw, str):
-        # Try numeric string first (e.g., "1718976000") — the backend
+        # Try numeric string first (e.g., "1718976000"), the backend
         # may send the timestamp as a stringified number.
         num_result = Result.try_(lambda: float(raw))
         if num_result.is_ok:

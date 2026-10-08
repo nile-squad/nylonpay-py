@@ -1,16 +1,16 @@
-"""Result type — the SDK's error boundary primitive.
+"""Result type, the SDK's error boundary primitive.
 
 The SDK separates programmer errors from operational errors:
 
 - **Programmer errors** (invalid config, missing required fields, bad amounts)
-  are *thrown* — they're bugs the developer must fix before shipping.
+  are *thrown*. They're bugs the developer must fix before shipping.
 - **Operational errors** (network failures, provider rejections, timeouts,
-  rate limits) are *returned* as ``Result.Err`` — they're expected runtime
+  rate limits) are *returned* as ``Result.Err``. They're expected runtime
   conditions the caller should handle gracefully.
 
 ``Result`` makes this boundary explicit at every call site. A function
-returning ``Result[Transaction, str]`` cannot silently succeed on failure —
-the caller must check ``is_ok`` before accessing ``value``. This eliminates
+returning ``Result[Transaction, str]`` cannot silently succeed on failure.
+The caller must check ``is_ok`` before accessing ``value``. This eliminates
 the "forgot to check the error" class of bugs that plague exception-based
 error handling in payment systems, where a missed error can mean a
 fulfilled order with no payment.
@@ -18,7 +18,7 @@ fulfilled order with no payment.
 ``Result.try_(fn)`` is the single try/except boundary in the SDK.
 All other code calls ``Result.try_`` instead of writing its own try/except.
 This centralizes exception catching in one audited location rather than
-scattering it across the codebase — every other module stays free of
+scattering it across the codebase, every other module stays free of
 raw exception handling.
 
 The trailing underscore is the Python convention for names that collide
@@ -26,7 +26,7 @@ with keywords (``try`` is reserved). Same pattern as ``print_``,
 ``class_``, ``type_`` across the ecosystem.
 
 The error type for ``Result.try_`` is ``Exception`` (the caught object),
-not ``str`` — callers can inspect ``result.error`` for type, message,
+not ``str``, callers can inspect ``result.error`` for type, message,
 or re-raise if needed. For operational errors returned from the backend,
 the error type is ``str`` (a JSON-serialized ``SdkError`` that
 ``parse_error`` can decode into a structured category + message).
@@ -47,7 +47,7 @@ class Result(Generic[T, E]):
     """A value that is either ok (success) or err (failure).
 
     Construct with ``Result.ok(value)``, ``Result.err(error)``, or
-    ``Result.try_(fn)``. Never construct directly — the class methods
+    ``Result.try_(fn)``. Never construct directly. The class methods
     enforce the invariant that exactly one of value/error is set.
     """
 
@@ -67,13 +67,13 @@ class Result(Generic[T, E]):
 
     @classmethod
     def try_(cls, fn: Callable[[], T]) -> Result[T, Exception]:
-        """Wrap a callable — returns ``Ok(value)`` or ``Err(exception)``.
+        """Wrap a callable, returns ``Ok(value)`` or ``Err(exception)``.
 
-        Never raises. This is the SDK's single try/except boundary —
+        Never raises. This is the SDK's single try/except boundary,
         all other code calls ``Result.try_`` instead of writing its own.
 
         The error type is ``Exception`` (the caught exception object),
-        not ``str`` — callers can inspect ``result.error`` for type,
+        not ``str``, callers can inspect ``result.error`` for type,
         message, or re-raise if needed.
         """
         try:

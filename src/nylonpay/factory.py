@@ -2,7 +2,7 @@
 
 Main entry point for merchants. Singleton-caches instances by
 ``api_key + base_url + sha256(api_secret)`` so the same credentials
-return the same instance — rotating the secret yields a fresh one.
+return the same instance, rotating the secret yields a fresh one.
 """
 
 from __future__ import annotations

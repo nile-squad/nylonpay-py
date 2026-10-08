@@ -3,10 +3,10 @@
 Creates an event-driven payment instance that polls for status updates,
 emits lifecycle events, and supports blocking until terminal state.
 
-Fully synchronous — no asyncio. Events fire as callbacks during ``wait()``,
+Fully synchronous, no asyncio. Events fire as callbacks during ``wait()``,
 which runs a polling loop with ``time.sleep`` between polls.
 
-Factory pattern — :func:`create_payment_instance` returns a plain object
+Factory pattern, :func:`create_payment_instance` returns a plain object
 (``SimpleNamespace``) with closure-based methods. No classes.
 """
 
@@ -76,12 +76,12 @@ def create_payment_instance(
     optional poll config, and an optional ``initial_error`` for backend
     rejections that surface as events rather than exceptions.
 
-    Events fire during ``wait()`` — the polling loop runs inside it and
+    Events fire during ``wait()``, the polling loop runs inside it and
     calls registered callbacks as the status changes. If ``wait()`` is
     never called, no polling occurs.
 
     Returns a ``SimpleNamespace`` with ``reference``, ``status``,
-    ``on``, ``once``, ``off``, ``wait`` — satisfies ``PaymentInstance``
+    ``on``, ``once``, ``off``, ``wait``, satisfies ``PaymentInstance``
     protocol without a class.
     """
     emitter = create_emitter()
