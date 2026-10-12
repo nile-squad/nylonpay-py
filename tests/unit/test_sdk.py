@@ -502,6 +502,51 @@ def test_collect_payment_forwards_failure_code_test_outcome(captured):
         client.close()
 
 
+# prompt (sandbox PIN gate) ----------------------------------------------------
+
+
+def test_collect_payment_forwards_prompt_on_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.collect_payment(**_collect_input(prompt="pin"))
+        assert cap["body"]["payload"]["prompt"] == "pin"
+    finally:
+        client.close()
+
+
+def test_make_payout_forwards_prompt_on_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.make_payout(**_payout_input(prompt="pin"))
+        assert cap["body"]["payload"]["prompt"] == "pin"
+    finally:
+        client.close()
+
+
+def test_omitted_prompt_is_absent_from_wire(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        sdk.collect_payment(**_collect_input())
+        assert "prompt" not in cap["body"]["payload"]
+    finally:
+        client.close()
+
+
+def test_invalid_prompt_throws_before_network(captured):
+    sdk, client, cap = _make_sdk(_default_handler)
+    try:
+        with pytest.raises(SdkException) as exc:
+            sdk.collect_payment(**_collect_input(prompt="later"))
+        assert exc.value.category == "validation"
+        assert 'prompt must be "pin"' in str(exc.value)
+        with pytest.raises(SdkException) as exc2:
+            sdk.make_payout(**_payout_input(prompt="later"))
+        assert exc2.value.category == "validation"
+        assert "body" not in cap
+    finally:
+        client.close()
+
+
 def _utility_handler(req, cap):
     body = cap.get("body") or {}
     payload = body.get("payload", {})

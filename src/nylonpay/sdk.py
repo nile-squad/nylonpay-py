@@ -46,6 +46,7 @@ from .sdk_error import build_sdk_error
 from .slang import Err, Ok, Result
 from .transport import create_sdk_error, create_transport, parse_error
 from .types import (
+    SANDBOX_PROMPTS,
     SANDBOX_TEST_OUTCOMES,
     AfterHookInput,
     BuyAirtimeInput,
@@ -141,6 +142,12 @@ def _validate_test_outcome(test_outcome: Any) -> None:
         _throw_validation('test_outcome must be "success", "fail", or a Nylon failure code')
 
 
+def _validate_sandbox_prompt(prompt: Any) -> None:
+    """Validate the sandbox-only customer PIN gate (runtime check for plain-dict callers)."""
+    if prompt is not None and prompt not in SANDBOX_PROMPTS:
+        _throw_validation('prompt must be "pin"')
+
+
 def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
     """Full validate + normalize + resolve reference for a collection.
 
@@ -150,6 +157,7 @@ def _prepare_collect_payload(input: CollectPaymentInput) -> CollectPaymentInput:
     reference = _resolve_reference(input.reference)
     _validate_collection_amount(input.amount, input.currency)
     _validate_test_outcome(input.test_outcome)
+    _validate_sandbox_prompt(input.prompt)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
     normalized_phone = normalize_phone(input.customer.phone_number, input.currency)
@@ -170,6 +178,7 @@ def _prepare_payout_payload(input: MakePayoutInput) -> MakePayoutInput:
     reference = _resolve_reference(input.reference)
     _validate_payout_amount(input.amount, input.currency)
     _validate_test_outcome(input.test_outcome)
+    _validate_sandbox_prompt(input.prompt)
     _validate_non_empty(input.customer.name, "customer.name")
     _validate_non_empty(input.customer.phone_number, "customer.phone_number")
     normalized_phone = normalize_phone(input.customer.phone_number, input.currency)

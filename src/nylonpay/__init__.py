@@ -26,6 +26,7 @@ from .slang import Err, Ok, Result
 from .transport import SdkException, create_sdk_error, parse_error
 from .types import (
     FAILURE_CODES,
+    SANDBOX_PROMPTS,
     SANDBOX_TEST_OUTCOMES,
     AfterCollectHook,
     AfterHookInput,
@@ -56,6 +57,7 @@ from .types import (
     PaymentInstance,
     PaymentMethod,
     PhoneVerification,
+    SandboxPrompt,
     SandboxTestOutcome,
     SdkError,
     SdkErrorCategory,
@@ -83,6 +85,7 @@ __all__ = [
     "DISABLE_FRESHNESS_CHECK",
     "FAILURE_CODES",
     "LEGACY_BASE_URL",
+    "SANDBOX_PROMPTS",
     "SANDBOX_TEST_OUTCOMES",
     "AfterCollectHook",
     "AfterHookInput",
@@ -116,6 +119,7 @@ __all__ = [
     "PaymentMethod",
     "PhoneVerification",
     "Result",
+    "SandboxPrompt",
     "SandboxTestOutcome",
     "SdkError",
     "SdkErrorCategory",

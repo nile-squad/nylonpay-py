@@ -107,6 +107,11 @@ SandboxTestOutcome = Literal[
     "cancelled",
 ]
 
+# Sandbox-only customer PIN gate. Keep identical to the backend sandbox prompt values.
+SANDBOX_PROMPTS = ("pin",)
+
+SandboxPrompt = Literal["pin"]
+
 SdkErrorReason = Literal[
     "AUTH",
     "VALIDATION",
@@ -210,6 +215,14 @@ class CollectPaymentInput:
     #: Rejected with a validation error when used with a live key.
     #: Serialized to the wire as ``testOutcome``.
     test_outcome: SandboxTestOutcome | None = None
+    #: Sandbox-only customer PIN gate. ``"pin"`` holds the payment until the
+    #: merchant types the customer's 5-digit PIN on the dashboard phone simulator
+    #: (up to 2 minutes, 3 tries). Ignored when ``test_outcome`` is also set.
+    #: Rejected with a validation error when used with a live key. The
+    #: ``*_and_resolve`` calls can wait about 2 minutes, so raise the poll cap
+    #: above that if you set one.
+    #: Serialized to the wire as ``prompt``.
+    prompt: SandboxPrompt | None = None
 
 
 @dataclass(frozen=True)
@@ -233,6 +246,14 @@ class MakePayoutInput:
     #: Rejected with a validation error when used with a live key.
     #: Serialized to the wire as ``testOutcome``.
     test_outcome: SandboxTestOutcome | None = None
+    #: Sandbox-only customer PIN gate. ``"pin"`` holds the payment until the
+    #: merchant types the customer's 5-digit PIN on the dashboard phone simulator
+    #: (up to 2 minutes, 3 tries). Ignored when ``test_outcome`` is also set.
+    #: Rejected with a validation error when used with a live key. The
+    #: ``*_and_resolve`` calls can wait about 2 minutes, so raise the poll cap
+    #: above that if you set one.
+    #: Serialized to the wire as ``prompt``.
+    prompt: SandboxPrompt | None = None
 
 
 @dataclass(frozen=True)
