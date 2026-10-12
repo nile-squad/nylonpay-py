@@ -217,7 +217,8 @@ class CollectPaymentInput:
     test_outcome: SandboxTestOutcome | None = None
     #: Sandbox-only customer PIN gate. ``"pin"`` holds the payment until the
     #: merchant types the customer's 5-digit PIN on the dashboard phone simulator
-    #: (up to 2 minutes, 3 tries). Ignored when ``test_outcome`` is also set.
+    #: (up to 2 minutes, 3 tries). One PIN per merchant, shared by all of that
+    #: merchant's sandbox keys. Ignored when ``test_outcome`` is also set.
     #: Rejected with a validation error when used with a live key. The
     #: ``*_and_resolve`` calls can wait about 2 minutes, so raise the poll cap
     #: above that if you set one.
@@ -248,7 +249,8 @@ class MakePayoutInput:
     test_outcome: SandboxTestOutcome | None = None
     #: Sandbox-only customer PIN gate. ``"pin"`` holds the payment until the
     #: merchant types the customer's 5-digit PIN on the dashboard phone simulator
-    #: (up to 2 minutes, 3 tries). Ignored when ``test_outcome`` is also set.
+    #: (up to 2 minutes, 3 tries). One PIN per merchant, shared by all of that
+    #: merchant's sandbox keys. Ignored when ``test_outcome`` is also set.
     #: Rejected with a validation error when used with a live key. The
     #: ``*_and_resolve`` calls can wait about 2 minutes, so raise the poll cap
     #: above that if you set one.

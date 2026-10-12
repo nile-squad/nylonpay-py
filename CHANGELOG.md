@@ -6,7 +6,7 @@ Upgrading from 0.6.2.
 
 ### Added
 
-- Sandbox-only `prompt="pin"` on `collect_payment`, `collect_payment_and_resolve`, `make_payout` and `make_payout_and_resolve`. With a sandbox key the payment waits until the merchant types the customer's 5-digit PIN on the dashboard phone simulator (up to 2 minutes, 3 tries). Order when several sandbox options are set: `test_outcome` forces the result and `prompt` is ignored; `prompt` alone waits for the PIN; neither lets the sandbox decide on its own.
+- Sandbox-only `prompt="pin"` on `collect_payment`, `collect_payment_and_resolve`, `make_payout` and `make_payout_and_resolve`. With a sandbox key the payment waits until the merchant types the customer's 5-digit PIN on the dashboard phone simulator (up to about 2 minutes, 3 tries). The PIN is one per merchant and works with every sandbox key of that merchant. Order when several sandbox options are set: `test_outcome` forces the result and `prompt` is ignored; `prompt` alone waits for the PIN; neither lets the sandbox decide on its own.
 
 ## 0.6.2
 

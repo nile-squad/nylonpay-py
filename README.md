@@ -176,7 +176,7 @@ if result.is_ok:
 With a sandbox key, `collect_payment`, `collect_payment_and_resolve`, `make_payout` and `make_payout_and_resolve` accept two test-only options:
 
 - `test_outcome="success"` or `"fail"` (or a failure code) forces the result.
-- `prompt="pin"` holds the payment until the merchant types the customer's 5-digit PIN, shown on the dashboard phone simulator. The wait is up to 2 minutes with 3 tries.
+- `prompt="pin"` holds the payment until the merchant types the customer's 5-digit PIN, shown on the dashboard phone simulator. The wait is up to about 2 minutes with 3 tries. The PIN is one per merchant and works with every sandbox key of that merchant.
 
 If both are set, `test_outcome` wins. With neither, the sandbox decides on its own. A live key rejects both. The `*_and_resolve` variants can wait about 2 minutes with `prompt`, so raise `max_poll_duration_ms` above that if you cap polling.
 

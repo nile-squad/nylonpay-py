@@ -43,7 +43,8 @@ nylonpay = create_nylon_pay(
   raises a `validation` error, and so does using it with a live key.
 - With a sandbox key, `prompt="pin"` holds a test payment until the merchant
   types the customer's 5-digit PIN, shown on the dashboard phone simulator. The
-  wait is up to 2 minutes with 3 tries. `test_outcome` wins if both are set. The
+  PIN is one per merchant and works with every sandbox key of that merchant. The
+  wait is up to about 2 minutes with 3 tries. `test_outcome` wins if both are set. The
   `*_and_resolve` calls can wait about 2 minutes with `prompt`, so raise
   `max_poll_duration_ms` above that if you cap polling.
 - Amounts are integers in the currency's smallest tracked unit (for example `10000`).
