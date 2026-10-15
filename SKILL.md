@@ -39,7 +39,7 @@ nylonpay = create_nylon_pay(
 - With a sandbox key, pass `test_outcome="success"` or `test_outcome="fail"` on
   `collect_payment`, `collect_payment_and_resolve`, `make_payout` or
   `make_payout_and_resolve` to force the result. Omit it and the sandbox decides
-  at random, which makes a test that expects one outcome flaky. Any other value
+  at random, so a test expecting one outcome becomes flaky. Any other value
   raises a `validation` error, and so does using it with a live key.
 - With a sandbox key, `prompt="pin"` holds a test payment until the merchant
   types the customer's 5-digit PIN, shown on the dashboard phone simulator. The
@@ -71,12 +71,12 @@ print(result.value.status)
 |---|---|---|
 | Take money, react to live updates | `collect_payment` | `PaymentInstance` (events) |
 | Take money, await final state | `collect_payment_and_resolve` | `Result` |
-| Send money, react to live updates | `make_payout` | `PaymentInstance` |
-| Send money, await final state | `make_payout_and_resolve` | `Result` |
+| Send money, react to live updates | `make_payout` | `PaymentInstance` (`destination["phone"]` required) |
+| Send money, await final state | `make_payout_and_resolve` | `Result` (`destination["phone"]` required) |
 | One-shot status | `get_status` | `Result` |
 | Full transaction record | `get_transaction` | `Result` (`id` or `reference`) |
 | Pre-validate phone / get name | `verify_phone` | `Result` |
-| Hosted payment link (cards) | `create_invoice` | `Result` with `.payment_link` |
+| Hosted payment link (cards, Level 2 KYC) | `create_invoice` | `Result` with `.payment_link` |
 | Authenticate webhook | `verify_webhook_signature` | `bool` |
 
 Prefer `*_and_resolve` for simple request/response flows. Use event-driven
@@ -102,8 +102,8 @@ tx = payment.wait()  # transaction or None, does not raise on failure
 
 Events: `processing`, `success`, `failed`, `cancelled`, `error`.
 
-Use `on_error` in `create_nylon_pay` for one handler across all operations. An
-`NETWORK` means this machine is offline. `SERVICES_DOWN` means Nylon Pay did
+Use `on_error` in `create_nylon_pay` for one handler across all operations. A
+`NETWORK` error means this machine is offline. `SERVICES_DOWN` means Nylon Pay did
 not complete the request.
 
 ## Webhooks

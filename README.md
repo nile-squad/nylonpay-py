@@ -14,11 +14,8 @@ Requires Python 3.10+.
 
 ## Quick Start
 
-Create a client, initiate a payment, subscribe to events, and wait for completion.
-
 ```python
 from nylonpay import create_nylon_pay
-import secrets
 
 def on_error(error):
     if error.reason == "SERVICES_DOWN":
@@ -35,7 +32,7 @@ payment = nylonpay.collect_payment(
     currency="UGX",
     customer={"name": "Jane", "phone_number": "+256700000000"},
     description="Order #1234",
-    reference=secrets.token_hex(7),
+    reference="550e8400-e29b-41d4-a716-446655440000",  # optional; omit to auto-generate a UUID v4
 )
 
 def on_success(data):
@@ -88,7 +85,7 @@ The factory caches instances by `api_key + base_url + sha256(api_secret)`. Rotat
 
 ## Operations
 
-All operations accept keyword arguments. Nested types (`customer`, `destination`, `items`) accept plain dicts, no need to import dataclasses.
+All operations accept keyword arguments. Nested types (`customer`, `destination`, `items`) accept plain dicts.
 
 ### collect_payment
 
@@ -118,7 +115,7 @@ payment.on("failed", on_failed)
 
 ### collect_payment_and_resolve
 
-Block until the collection reaches a terminal state. Single request/response. The server checks status internally, no client-side waiting.
+Block until the collection reaches a terminal state. Single request and response; the server resolves the payment and returns the final state.
 
 ```python
 result = nylonpay.collect_payment_and_resolve(
@@ -134,7 +131,7 @@ if result.is_ok:
 
 ### make_payout
 
-Disburse funds to a destination account. Returns a `PaymentInstance` with event-driven updates.
+Send funds to a destination mobile money wallet or bank account. `destination["phone"]` is required on every payout. Returns a `PaymentInstance` with event-driven updates.
 
 ```python
 payout = nylonpay.make_payout(
@@ -144,6 +141,7 @@ payout = nylonpay.make_payout(
     destination={
         "account_holder_name": "Jane Doe",
         "account_number": "123456",
+        "phone": "+256700000000",
     },
     description="Refund for order #1234",
 )
@@ -153,7 +151,7 @@ tx = payout.wait()
 
 ### make_payout_and_resolve
 
-Block until the payout reaches a terminal state. Single request/response.
+Block until the payout reaches a terminal state. Single request and response.
 
 ```python
 result = nylonpay.make_payout_and_resolve(
@@ -163,6 +161,7 @@ result = nylonpay.make_payout_and_resolve(
     destination={
         "account_holder_name": "Jane Doe",
         "account_number": "123456",
+        "phone": "+256700000000",
     },
     description="Refund",
 )
@@ -206,6 +205,7 @@ payout = nylonpay.make_payout(
     destination={
         "account_holder_name": "Jane Doe",
         "account_number": "123456",
+        "phone": "+256700000000",
     },
     description="Refund for order #1234",
 )
@@ -231,7 +231,7 @@ if tx is not None:
 
 ### get_status
 
-One-shot status check for a transaction. Does not wait, returns the current server-side state.
+One-shot status check for a transaction. Returns the current server-side state in a single call.
 
 ```python
 result = nylonpay.get_status(reference="550e8400-e29b-41d4-a716-446655440000")
@@ -267,19 +267,19 @@ number typed without its `0` (`712345678` with `TZS` becomes `255712345678`).
 
 ### create_invoice
 
-Generate a hosted payment link. Card payments are only supported via this hosted flow. Card details never reach your servers.
+Generate a hosted payment link. Card payments run through this hosted flow so card details never reach your servers. Invoices require an approved Level 2 account in every currency.
 
 ```python
 result = nylonpay.create_invoice(
     amount=25000,
     currency="UGX",
+    customer_email="customer@example.com",
     description="Monthly subscription",
     items=[{"name": "Pro Plan", "quantity": 1, "unit_price": 25000}],
-    redirect_url="https://myapp.com/thank-you",
 )
 
 if result.is_ok:
-    print("Invoice URL:", result.value.url)
+    print("Invoice link:", result.value.payment_link)
 ```
 
 ### verify_webhook_signature
@@ -341,7 +341,7 @@ tx = payment.wait()
 
 ### wait()
 
-Block until terminal state. Returns `Transaction` on success, `None` on failure, cancellation, or error. Never raises. **Default:** waits until the payment finishes with no built-in time limit.
+Block until terminal state. Returns `Transaction` on success, `None` on failure, cancellation, or error. Never raises. **Default:** waits until the payment finishes.
 
 ```python
 tx = payment.wait()
@@ -459,7 +459,7 @@ Available hooks: `before_collect`, `after_collect`, `before_payout`, `after_payo
 
 ## Supported Currencies
 
-`USD`, `EUR`, `GBP`, `KES`, `UGX`, `TZS`, `RWF`
+`USD`, `EUR`, `GBP`, `KES`, `UGX`, `TZS`, `RWF`, `CDF`
 
 ## Links
 
