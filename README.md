@@ -2,7 +2,7 @@
 
 Server-side SDK for integrating Nylon Pay payment operations into your Python application.
 
-[Full documentation](https://docs.nylonpay.nilesquad.com/docs)
+[Full documentation](https://docs.nylonpay.com/docs)
 
 ## Install
 
@@ -463,11 +463,11 @@ Available hooks: `before_collect`, `after_collect`, `before_payout`, `after_payo
 
 ## Links
 
-- [Documentation](https://docs.nylonpay.nilesquad.com/docs)
+- [Documentation](https://docs.nylonpay.com/docs)
 - [SDK Spec](https://github.com/nile-squad/specs/blob/main/nylonpay-sdk-spec/spec.md)
 - [GitHub Repository](https://github.com/nile-squad/nylonpay-py)
 - [TypeScript SDK](https://github.com/nile-squad/nylonpay-ts)
-- [Nylon Pay](https://nylonpay.nilesquad.com)
+- [Nylon Pay](https://nylonpay.com)
 
 ## License
 

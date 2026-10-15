@@ -9,7 +9,7 @@ Server-side SDK for Nylon Pay. Python 3.10+. Published as `nylonpay-py`
 (`pip install nylonpay-py`). Import package name: `nylonpay`.
 
 Integration flows (language-agnostic):
-[Nylon Pay integration skill](https://docs.nylonpay.nilesquad.com/docs/skills).
+[Nylon Pay integration skill](https://docs.nylonpay.com/docs/skills).
 This file covers Python setup and syntax. Names are snake_case.
 Hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
 
@@ -139,6 +139,6 @@ if not is_valid:
 | TypeScript | [`@nile-squad/nylonpay-ts`](https://github.com/nile-squad/nylonpay-ts) | [SKILL.md](https://github.com/nile-squad/nylonpay-ts/blob/main/SKILL.md) |
 | PHP | [`nile-squad/nylonpay-php`](https://github.com/nile-squad/nylonpay-php) | [SKILL.md](https://github.com/nile-squad/nylonpay-php/blob/main/SKILL.md) |
 
-Integration skill: [docs](https://docs.nylonpay.nilesquad.com/docs/skills).
-Example prompts: [docs](https://docs.nylonpay.nilesquad.com/docs/skills/example-prompts).
+Integration skill: [docs](https://docs.nylonpay.com/docs/skills).
+Example prompts: [docs](https://docs.nylonpay.com/docs/skills/example-prompts).
 Hub: [nylonpay-overview](https://github.com/nile-squad/nylonpay-overview).
